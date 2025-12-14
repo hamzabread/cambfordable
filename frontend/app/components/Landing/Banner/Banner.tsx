@@ -7,7 +7,7 @@ const Banner = () => {
       <div className="relative w-full h-[90vh] md:h-[90vh] min-h-[400px] flex flex-col justify-center items-center text-center overflow-hidden">
         {/* Background Image */}
         <Image
-          src="/banner/banner.png"
+          src="/assets/banner/banner.png"
           alt="Background"
           fill
           priority

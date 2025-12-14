@@ -24,7 +24,7 @@ const Teach = () => {
           <Image
             width={600}
             height={1000}
-            src="/teach/teach.png"
+            src="/assets/teach/teach.png"
             alt="people"
             className="shrink"
           />

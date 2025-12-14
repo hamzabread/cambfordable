@@ -1,0 +1,17 @@
+uvicorn
+fastapi
+sqlalchemy
+psycopg2-binary
+alembic
+pydantic
+python-dotenv
+python-jose[cryptography]
+python-multipart
+passlib[bcrypt]==1.7.4
+starlette
+httpx
+pytest
+pytest-asyncio
+pytest-cov
+pydantic[email]
+bcrypt<4.0

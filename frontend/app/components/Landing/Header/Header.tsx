@@ -1,57 +1,65 @@
-'use client';
-import React, { useState } from 'react'
-import Link from 'next/link'
+"use client";
+import React, { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const Header = () => {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+
+  const isHome = pathname === "/";
 
   return (
     <>
       <header className="bg-[#1E3557] top-0 z-20 w-full left-0 p-2.5 pb-[23px] pt-[22px] md:py-[30px] md:px-[60px]">
         {/* Desktop Nav */}
         <nav className="hidden md:flex justify-between items-center">
-          <a href="/">
+          <Link href="/">
             <p className="text-white font-bold text-2xl">Cambfordable</p>
-          </a>
+          </Link>
+          {isHome && (
+            <div className="flex items-center gap-10">
+              <ul className="flex gap-10">
+                <li className="group relative text-white cursor-pointer">
+                  <Link href="/" className="relative font-light">
+                    Home
+                  </Link>
+                  <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
+                </li>
+                <li className="group relative text-white cursor-pointer">
+                  <a href="/" className="relative font-light">
+                    Our Teachers
+                  </a>
+                  <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
+                </li>
+                <li className="group relative text-white cursor-pointer">
+                  <Link href="/contact" className="relative font-light">
+                    Contact
+                  </Link>
+                  <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
+                </li>
+                <li className="group relative text-white cursor-pointer">
+                  <Link href="/about" className="relative font-light">
+                    More
+                  </Link>
+                  <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
+                </li>
+              </ul>
+            </div>
+          )}
+          {isHome && (
+            <div className="flex items-center gap-4">
+              <Link href="/login">
+                <button className="p-3 py-1.5 cursor-pointer text-[18px] bg-white text-black rounded-md">
+                  Login
+                </button>
+              </Link>
 
-          <div className="flex items-center gap-10">
-            <ul className="flex gap-10">
-              <li className="group relative text-white cursor-pointer">
-                <Link href="/" className="relative font-light">
-                  Home
-                </Link>
-                <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
-              </li>
-              <li className="group relative text-white cursor-pointer">
-                <a href="/" className="relative font-light">
-                  Our Teachers
-                </a>
-                <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
-              </li>
-              <li className="group relative text-white cursor-pointer">
-                <Link href="/contact" className="relative font-light">
-                  Contact
-                </Link>
-                <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
-              </li>
-              <li className="group relative text-white cursor-pointer">
-                <Link href="/about" className="relative font-light">
-                  More
-                </Link>
-                <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button className='p-3 py-1.5 cursor-pointer text-[18px] bg-white text-black rounded-md'>
-              Login
-            </button>
-
-            <button className='p-4 py-1.5 cursor-pointer text-[18px] border border-white/50 text-white rounded-md'>
-              Join
-            </button>
-          </div>
+              <button className="p-4 py-1.5 cursor-pointer text-[18px] border border-white/50 text-white rounded-md">
+                Join
+              </button>
+            </div>
+          )}
         </nav>
 
         {/* Mobile Nav */}
@@ -113,25 +121,41 @@ const Header = () => {
             </div>
             <ul className="space-y-6">
               <li className="group relative text-white cursor-pointer">
-                <Link href="/" className="relative font-light" onClick={() => setIsOpen(false)}>
+                <Link
+                  href="/"
+                  className="relative font-light"
+                  onClick={() => setIsOpen(false)}
+                >
                   Home
                 </Link>
                 <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
               </li>
               <li className="group relative text-white cursor-pointer">
-                <a href="/" className="relative font-light" onClick={() => setIsOpen(false)}>
+                <a
+                  href="/"
+                  className="relative font-light"
+                  onClick={() => setIsOpen(false)}
+                >
                   Our Teachers
                 </a>
                 <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
               </li>
               <li className="group relative text-white cursor-pointer">
-                <Link href="/contact" className="relative font-light" onClick={() => setIsOpen(false)}>
+                <Link
+                  href="/contact"
+                  className="relative font-light"
+                  onClick={() => setIsOpen(false)}
+                >
                   Contact
                 </Link>
                 <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
               </li>
               <li className="group relative text-white cursor-pointer">
-                <a href="/about" className="relative font-light" onClick={() => setIsOpen(false)}>
+                <a
+                  href="/about"
+                  className="relative font-light"
+                  onClick={() => setIsOpen(false)}
+                >
                   More
                 </a>
                 <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
@@ -151,7 +175,7 @@ const Header = () => {
         </div>
       </div>
     </>
-  )
-}
+  );
+};
 
-export default Header
+export default Header;
