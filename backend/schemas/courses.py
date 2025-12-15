@@ -5,8 +5,14 @@ class CourseOut(BaseModel):
     id: int
     name: str
     code: str
-    progress: int
-    completed: int
 
     class Config:
         from_attributes = True
+
+class CourseCreate(BaseModel):
+    name: str
+    code: str
+
+class EnrolledCourseBase(CourseOut):
+    progress: int
+    completed: int

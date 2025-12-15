@@ -38,13 +38,13 @@ const QuickStats = () => {
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       {stats.map((stat, idx) => {
         const Icon = stat.icon;
         return (
           <div
             key={idx}
-            className={`${stat.bgColor} border ${stat.borderColor} rounded-lg p-6`}
+            className={`${stat.bgColor} border ${stat.borderColor} flex flex-col justify-between rounded-lg p-6`}
           >
             <div className="flex items-start justify-between mb-4">
               <div>
@@ -53,14 +53,14 @@ const QuickStats = () => {
                   {stat.subtitle}
                 </h3>
                 {stat.detail && (
-                  <p className="text-sm text-slate-600 mt-2">{stat.detail}</p>
+                  <p className="text-sm  text-slate-600 mt-2">{stat.detail}</p>
                 )}
               </div>
               <Icon className="w-6 h-6 text-slate-400" />
             </div>
 
             <button
-              className={`w-full ${stat.actionBg} text-white font-semibold py-2 rounded-lg transition`}
+              className={`w-full ${stat.actionBg}  text-white font-semibold py-2 rounded-lg transition`}
             >
               {stat.action}
             </button>

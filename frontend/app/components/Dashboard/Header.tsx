@@ -12,6 +12,7 @@ interface User {
 
 interface HeaderProps {
   user: User;
+  onMenuToggle: () => void;
 }
 
 const Header = ({ user }: HeaderProps) => {
@@ -22,6 +23,24 @@ const Header = ({ user }: HeaderProps) => {
     localStorage.removeItem("access_token");
     router.push("/login");
   };
+
+  if (!user) {
+    return (
+      <header className="bg-white border-b border-slate-200 shadow-sm">
+        <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            
+          </div>
+          <div className="flex items-center gap-3 sm:gap-6">
+            <button className="relative p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition">
+              <Bell className="w-6 h-6" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="bg-white border-b border-slate-200 shadow-sm">

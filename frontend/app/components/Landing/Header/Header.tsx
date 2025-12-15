@@ -7,7 +7,7 @@ const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
-  const isHome = pathname === "/";
+  const isHome = pathname !== "/login" && pathname !== "/signup";
 
   return (
     <>

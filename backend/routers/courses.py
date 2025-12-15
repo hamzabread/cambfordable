@@ -2,13 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import get_db
-from core.security import get_current_user
+from core.security import get_current_user, get_current_admin
 from models.users import User
 from crud.enrollments import (
     enroll_user_in_course,
     get_user_enrollments,
+    get_user_courses_with_progress,
 )
-from schemas.courses import CourseOut
+from schemas.courses import CourseOut, EnrolledCourseBase
+from crud.courses import get_all_courses, create_course
 
 router = APIRouter(prefix="/courses", tags=["Courses"])
 
@@ -26,20 +28,23 @@ def enroll_course(
     return {"message": "Enrolled successfully"}
 
 
-@router.get("/me", response_model=list[CourseOut])
+@router.get("/me", response_model=list[EnrolledCourseBase])
 def my_courses(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    enrollments = get_user_enrollments(db, current_user)
+    return get_user_courses_with_progress(db, current_user)
 
-    return [
-        CourseOut(
-            id=e.course.id,
-            name=e.course.name,
-            code=e.course.code,
-            progress=e.progress,
-            completed=e.completed,
-        )
-        for e in enrollments
-    ]
+
+
+@router.get("/", response_model=list[CourseOut])
+def list_courses(db: Session = Depends(get_db)):
+    return get_all_courses(db)
+
+@router.post("/", response_model=CourseOut)
+def admin_create_course(
+    course_in: CourseOut,
+    db: Session = Depends(get_db),
+    admin_user = Depends(get_current_admin)
+):
+    return create_course(db, course_in )

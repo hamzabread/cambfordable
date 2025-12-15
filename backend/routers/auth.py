@@ -8,7 +8,7 @@ from jose import JWTError, jwt
 
 from database import get_db
 from models.users import User as UserModel
-from schemas.users import UserCreate, UserBase
+from schemas.users import UserCreate, UserBase, UserMe
 from schemas.auth import Token
 from crud.users import get_user_by_username, get_user_by_email, create_user
 from core.hashing import get_password_hash, verify_password
@@ -61,9 +61,10 @@ def login(
 # ------------------------
 # Current user
 # ------------------------
-@router.get("/me", response_model=UserBase)
-def read_current_user(current_user: UserModel = Depends(get_current_user)):
+@router.get("/me", response_model=UserMe)
+def read_users_me(current_user: UserModel = Depends(get_current_user)):
     return current_user
+
 
 # ------------------------
 # Refresh token

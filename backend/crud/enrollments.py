@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from models.enrollments import Enrollment
 from models.courses import Course
 from models.users import User
+from schemas.courses import CourseOut, EnrolledCourseBase
 
 def enroll_user_in_course(
     db: Session,
@@ -40,3 +41,21 @@ def get_user_enrollments(db: Session, user: User):
         .filter(Enrollment.user_id == user.id)
         .all()
     )
+
+def get_user_courses_with_progress(db: Session, user: User):
+    enrollments = (
+        db.query(Enrollment)
+        .filter(Enrollment.user_id == user.id)
+        .all()
+    )
+
+    return [
+        EnrolledCourseBase(
+            id=e.course.id,
+            name=e.course.name,
+            code=e.course.code,
+            progress=e.progress,
+            completed=e.completed,
+        )
+        for e in enrollments
+    ]

@@ -33,21 +33,25 @@ const Notifications = () => {
   ];
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8">
-      <h2 className="text-2xl font-bold text-slate-900 mb-6">Notifications</h2>
+    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 sm:p-6 lg:p-8">
+      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-4 sm:mb-6">
+        Notifications
+      </h2>
 
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {notifications.map((notif) => (
           <div
             key={notif.id}
-            className="flex items-start gap-4 p-4 rounded-lg border border-slate-200 hover:border-slate-300 transition"
+            className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border border-slate-200 hover:border-slate-300 transition"
           >
             {/* Icon */}
-            <div className="flex-shrink-0 text-slate-600 mt-1">{notif.icon}</div>
+            <div className="flex-shrink-0 text-slate-600 mt-1">
+              {notif.icon}
+            </div>
 
             {/* Message */}
-            <div className="flex-1">
-              <p className="text-sm text-slate-700 font-medium">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm sm:text-base text-slate-700 font-medium break-words">
                 {notif.message}
               </p>
             </div>
@@ -56,7 +60,7 @@ const Notifications = () => {
       </div>
 
       {/* View All Button */}
-      <button className="w-full mt-6 py-2 text-slate-900 font-semibold border border-slate-200 rounded-lg hover:bg-slate-50 transition">
+      <button className="w-full mt-4 sm:mt-6 py-2 text-slate-900 font-semibold border border-slate-200 rounded-lg hover:bg-slate-50 transition text-sm sm:text-base">
         View All Notifications
       </button>
     </div>

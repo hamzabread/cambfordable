@@ -17,3 +17,7 @@ class Course(Base):
         back_populates="course",
         cascade="all, delete-orphan",
     )
+
+    live_classes = relationship("LiveClass", back_populates="course")
+
+    homeworks = relationship("Homework", back_populates="course")

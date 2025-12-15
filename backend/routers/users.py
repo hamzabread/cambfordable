@@ -9,3 +9,4 @@ router = APIRouter(prefix="/users", tags=["Users"])
 def list_users(db: Session = Depends(get_db)):
     users = get_all_users(db)
     return users
+
