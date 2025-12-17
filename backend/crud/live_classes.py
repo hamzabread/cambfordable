@@ -11,8 +11,8 @@ def create_live_class(db: Session, live_class_in: LiveClassCreate):
     db.add(live_class)
     db.commit()
     db.refresh(live_class)
-    live_class.is_live = datetime.now(timezone.utc) >= live_class.starts_at and datetime.now(timezone.utc) <= live_class.ends_at
     return live_class
+
 
 def get_joinable_live_class(db: Session, *, class_id: int, user: User) -> LiveClass:
     live_class = db.query(LiveClass).get(class_id)
@@ -36,28 +36,9 @@ def get_joinable_live_class(db: Session, *, class_id: int, user: User) -> LiveCl
     return live_class
 
 def get_user_live_classes(db: Session, user: User):
-    live_classes = (
+    return (
         db.query(LiveClass)
         .join(Enrollment, Enrollment.course_id == LiveClass.course_id)
         .filter(Enrollment.user_id == user.id)
         .all()
     )
-
-    now = datetime.now(timezone.utc)
-
-    for lc in live_classes:
-        lc.is_live = now >= lc.starts_at and now <= lc.ends_at
-
-    # Convert each SQLAlchemy object to a dict for Pydantic, adding `is_live`
-    return [
-        {
-            "id": lc.id,
-            "course_id": lc.course_id,
-            "title": lc.title,
-            "starts_at": lc.starts_at,
-            "ends_at": lc.ends_at,
-            "meeting_url": lc.meeting_url,
-            "is_live": lc.starts_at <= now <= lc.ends_at
-        }
-        for lc in live_classes
-    ]

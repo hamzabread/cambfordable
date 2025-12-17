@@ -7,6 +7,7 @@ class LiveClassBase(BaseModel):
     title: str
     starts_at: datetime
     ends_at: datetime
+    
 
     class Config:
         from_attributes = True

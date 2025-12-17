@@ -4,7 +4,7 @@ from passlib.context import CryptContext
 
 from core.config import SECRET_KEY, ALGORITHM, REFRESH_TOKEN_EXPIRE_MINUTES
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, WebSocket
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from sqlalchemy.orm import Session
@@ -64,3 +64,27 @@ def get_current_admin(current_user: User = Depends(get_current_user)):
             detail="Admin privileges required"
         )
     return current_user
+
+
+async def get_current_user_ws(websocket: WebSocket, db: Session) -> User:
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=1008)
+        raise HTTPException(status_code=401, detail="Missing token")
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str | None = payload.get("sub")
+        if username is None:
+            await websocket.close(code=1008)
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError:
+        await websocket.close(code=1008)
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = get_user_by_username(db, username)
+    if not user:
+        await websocket.close(code=1008)
+        raise HTTPException(status_code=401, detail="User not found")
+
+    return user

@@ -17,3 +17,8 @@ class LiveClass(Base):
     meeting_url = Column(String, nullable=False)
 
     course = relationship("Course", back_populates="live_classes")
+
+    @property
+    def is_live(self) -> bool:
+        now = datetime.now(timezone.utc)
+        return self.starts_at <= now <= self.ends_at

@@ -4,6 +4,7 @@ from routers.users import router as users_router
 from routers.courses import router as courses_router
 from routers.live_classes import router as live_classes_router
 from routers.homework import router as homework_router
+from routers.websocket import router as websocket_router
 from database import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -36,6 +37,7 @@ app.include_router(users_router)
 app.include_router(courses_router)
 app.include_router(live_classes_router)
 app.include_router(homework_router)
+app.include_router(websocket_router)
 
 @app.get("/")
 async def read_root():

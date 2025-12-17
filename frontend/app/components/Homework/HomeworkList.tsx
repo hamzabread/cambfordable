@@ -49,6 +49,18 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
         );
         setEnrolledCourses(coursesRes.data);
 
+        // Fetch submissions to check which are already submitted
+        const submissionsRes = await axios.get(
+          "http://localhost:8000/homeworks/me",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        const submittedIds = submissionsRes.data.map(
+          (s: any) => s.homework_id
+        );
+        setSubmittedHomeworkIds(submittedIds);
+
         // Fetch homeworks for each course
         const allHomeworks: Homework[] = [];
         for (const course of coursesRes.data) {
@@ -61,12 +73,17 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
           allHomeworks.push(...hwRes.data);
         }
 
+        // Filter out already submitted homeworks
+        const unsubmittedHomeworks = allHomeworks.filter(
+          (hw) => !submittedIds.includes(hw.id)
+        );
+
         // Sort by due date
-        allHomeworks.sort(
+        unsubmittedHomeworks.sort(
           (a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
         );
 
-        setHomeworks(allHomeworks);
+        setHomeworks(unsubmittedHomeworks);
         setError(null);
       } catch (err: any) {
         console.error("Error fetching homework:", err);
@@ -277,6 +294,14 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
             setSelectedHomework(null);
           }}
           onSuccess={() => {
+            // Remove submitted homework from list
+            setHomeworks(
+              homeworks.filter((hw) => hw.id !== selectedHomework.id)
+            );
+            setSubmittedHomeworkIds([
+              ...submittedHomeworkIds,
+              selectedHomework.id,
+            ]);
             setShowModal(false);
             setSelectedHomework(null);
           }}
