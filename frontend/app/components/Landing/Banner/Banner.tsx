@@ -4,7 +4,7 @@ import Image from 'next/image';
 const Banner = () => {
   return (
     <section id='Home' className='bg-neutral-900 mt-0'>
-      <div className="relative w-full h-[90vh] md:h-[90vh] min-h-[400px] flex flex-col justify-center items-center text-center overflow-hidden">
+      <div className="relative w-full h-[90vh] md:h-[75vh] min-h-[400px] flex flex-col justify-center items-center text-center overflow-hidden">
         {/* Background Image */}
         <Image
           src="/assets/banner/banner.png"

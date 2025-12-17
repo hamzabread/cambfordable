@@ -1,191 +1,216 @@
-import React from "react";
-import { CheckCircle } from "lucide-react";
+"use client";
 
-export default function CertificatesSection() {
-  const certificates = [
+import React from "react";
+import { Download, Mail, Github, Linkedin, Twitter } from "lucide-react";
+
+export default function BiographySection() {
+  const socialLinks = [
+    { icon: Mail, href: "#", label: "Email" },
+    { icon: Github, href: "#", label: "GitHub" },
+    { icon: Linkedin, href: "#", label: "LinkedIn" },
+    { icon: Twitter, href: "#", label: "Twitter" },
+  ];
+
+  const education = [
     {
-      id: 1,
-      title: "O-Levels Mathematics",
-      issuer: "Cambridge International",
-      year: "2022",
-      image:
-        "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=80&h=80&fit=crop",
-      color: "from-emerald-50 to-emerald-100 border-l-4 border-emerald-500",
+      degree: "Ph.D. in Electrical Engineering",
+      gpa: "(4.0/4.0)",
+      year: "2020",
+      institution: "King Abdullah University of Science and Technology (KAUST)",
+      color: "from-blue-500 to-blue-600",
     },
     {
-      id: 2,
-      title: "A-Levels Physics",
-      issuer: "Cambridge International",
-      year: "2023",
-      image:
-        "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=80&h=80&fit=crop",
-      color: "from-blue-50 to-blue-100 border-l-4 border-blue-500",
+      degree: "M.S. in Communication Engineering",
+      gpa: "(4.0/4.0)",
+      year: "2010",
+      institution: "Chalmers University of Technology, Sweden",
+      color: "from-emerald-500 to-emerald-600",
     },
     {
-      id: 3,
-      title: "AI & Machine Learning Certification",
-      issuer: "Stanford Online",
-      year: "2023",
-      image:
-        "https://images.unsplash.com/photo-1555613521-2ef3d707b656?w=80&h=80&fit=crop",
-      color: "from-green-50 to-green-100 border-l-4 border-green-500",
-    },
-    {
-      id: 4,
-      title: "A-Levels Chemistry",
-      issuer: "Cambridge International",
-      year: "2023",
-      image:
-        "https://images.unsplash.com/photo-1576086213369-97a306d36557?w=80&h=80&fit=crop",
-      color: "from-purple-50 to-purple-100 border-l-4 border-purple-500",
+      degree: "B.S. in Electronics Engineering",
+      gpa: "(3.99/4.0)",
+      year: "2007",
+      institution: "COMSATS University Islamabad",
+      color: "from-orange-500 to-orange-600",
     },
   ];
 
-  const getColorClasses = (color : string) => {
-    const colorMap = {
-      "from-emerald-50 to-emerald-100 border-l-4 border-emerald-500": {
-        badge: "bg-emerald-100 text-emerald-700",
-        icon: "text-emerald-600",
-      },
-      "from-blue-50 to-blue-100 border-l-4 border-blue-500": {
-        badge: "bg-blue-100 text-blue-700",
-        icon: "text-blue-600",
-      },
-      "from-green-50 to-green-100 border-l-4 border-green-500": {
-        badge: "bg-green-100 text-green-700",
-        icon: "text-green-600",
-      },
-      "from-purple-50 to-purple-100 border-l-4 border-purple-500": {
-        badge: "bg-purple-100 text-purple-700",
-        icon: "text-purple-600",
-      },
-      "from-cyan-50 to-cyan-100 border-l-4 border-cyan-500": {
-        badge: "bg-cyan-100 text-cyan-700",
-        icon: "text-cyan-600",
-      },
-      "from-orange-50 to-orange-100 border-l-4 border-orange-500": {
-        badge: "bg-orange-100 text-orange-700",
-        icon: "text-orange-600",
-      },
-    };
-    return colorMap[color as keyof typeof colorMap];
-  };
+  const interests = [
+    "Electrical Engineering",
+    "Computer Science",
+    "Artificial Intelligence",
+    "Applied Industry Solutions",
+    "International Collaboration",
+    "Engineering Education",
+  ];
 
   return (
-    <div className="bg-gradient-to-br from-gray-50 to-gray-100 py-16 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
-            My Credentials & Expertise
-          </h1>
-          <p className="text-lg text-gray-700 max-w-2xl mx-auto">
-            Specialized in O-Levels, A-Levels, and Artificial Intelligence with
-            verified certifications
-          </p>
-        </div>
-
-        {/* Content Wrapper */}
+    <div className="py-16 relative px-4 sm:px-6 lg:px-8" style={{ backgroundColor: "#F3F3F3" }}>
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute z-0 inset-0 h-full w-full object-cover"
+      >
+        <source src="/assets/certificate/bg-vid.mp4" type="video/mp4" />
+      </video>
+      <div className="max-w-7xl z-10 mx-auto">
+        {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
-          {/* Left: Profile Images */}
-          <div className="lg:col-span-1 space-y-5">
-            <div className="overflow-hidden rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 border-4 border-emerald-500">
-              <img
-                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=500&fit=crop"
-                alt="Profile"
-                className="w-full h-96 object-cover hover:scale-105 transition-transform duration-300"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-blue-400">
-                <img
-                  src="https://images.unsplash.com/photo-1516321318423-f06f70d504f0?w=200&h=180&fit=crop"
-                  alt="Teaching session"
-                  className="w-full h-32 object-cover hover:scale-110 transition-transform duration-300"
-                />
+          {/* Left Column - Profile */}
+          <div className="lg:col-span-1">
+            {/* Profile Image */}
+            <div className="mb-8">
+              <div className="relative w-48 h-48 mx-auto mb-6 rounded-2xl overflow-hidden border-4 border-blue-400 shadow-2xl">
+                <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                  <span className="text-6xl font-bold text-white">C</span>
+                </div>
               </div>
-              <div className="overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-green-400">
-                <img
-                  src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=180&fit=crop"
-                  alt="Teaching moment"
-                  className="w-full h-32 object-cover hover:scale-110 transition-transform duration-300"
-                />
+
+              {/* Name and Title */}
+              <div className="text-center relative z-10">
+                <h1 className="text-3xl text-black font-bold mb-2">Ali Imran</h1>
+                <p className="text-slate-500 z-10 text-sm mb-1">
+                  Senior Member IEEE USA
+                </p>
+                <p className="text-slate-400 text-xs">
+                  Ph.D. Electrical Engineering
+                </p>
               </div>
             </div>
-          </div>
 
-          {/* Right: Certificates */}
-          <div className="lg:col-span-2">
-            <div className="space-y-4">
-              {certificates.map((cert) => {
-                const borderColorMap: Record<string, string> = {
-                  "from-emerald-50 to-emerald-100 border-l-4 border-emerald-500":
-                    "border-emerald-500",
-                  "from-blue-50 to-blue-100 border-l-4 border-blue-500":
-                    "border-blue-500",
-                  "from-green-50 to-green-100 border-l-4 border-green-500":
-                    "border-green-500",
-                  "from-purple-50 to-purple-100 border-l-4 border-purple-500":
-                    "border-purple-500",
-                  "from-cyan-50 to-cyan-100 border-l-4 border-cyan-500":
-                    "border-cyan-500",
-                  "from-orange-50 to-orange-100 border-l-4 border-orange-500":
-                    "border-orange-500",
-                };
-                const borderColor =
-                  borderColorMap[cert.color as keyof typeof borderColorMap];
-                const colors = getColorClasses(cert.color);
+            {/* Social Links */}
+            <div className="flex z-10 relative justify-center gap-4 mb-8">
+              {socialLinks.map((social) => {
+                const Icon = social.icon;
                 return (
-                  <div
-                    key={cert.id}
-                    className={`bg-white border-2 ${borderColor} p-5 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 transform hover:translate-y-[-4px] flex gap-4`}
+                  <a
+                    key={social.label}
+                    href={social.href}
+                    title={social.label}
+                    className="p-2 rounded-lg transition-all duration-300 transform hover:scale-110"
+                    style={{ backgroundColor: "#1E3557" }}
                   >
-                    {/* Certificate Image */}
-                    <div className="flex-shrink-0">
-                      <img
-                        src={cert.image}
-                        alt={cert.title}
-                        className="w-16 h-16 rounded-lg object-cover shadow-md border-2 border-white"
-                      />
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <h3 className="font-bold text-gray-900 text-base mb-1">
-                            {cert.title}
-                          </h3>
-                          <p className="text-sm text-gray-700 mb-2">
-                            {cert.issuer}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <CheckCircle className={`w-4 h-4 ${colors.icon}`} />
-                        <span className="text-xs text-gray-700 font-semibold">
-                          {cert.year}
-                        </span>
-                        <span className="text-xs text-gray-600">
-                          • Verified
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                    <Icon className="w-5 h-5 text-white" />
+                  </a>
                 );
               })}
             </div>
 
-            {/* More Information Button */}
+            {/* Download CV Button */}
+            <button className="w-full relative z-10 px-4 py-2.5 text-white font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 mb-8 hover:opacity-90" style={{ backgroundColor: "#1E3557" }}>
+              <Download className="w-4 h-4" />
+              Download CV
+            </button>
+
+            {/* Quick Stats */}
+            <div className="space-y-3 z-10 relative">
+              <div className="rounded-lg p-4" style={{ backgroundColor: "#E8EEF7" }}>
+                <p className="text-slate-600 text-xs mb-1">Member Since</p>
+                <p className="font-bold" style={{ color: "#1E3557" }}>IEEE USA</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Biography */}
+          <div className="lg:col-span-2 z-10 relative">
+            {/* Header */}
+            <div className="mb-8">
+              <h2 className="text-4xl text-black font-bold mb-6">Biography</h2>
+              <div className="w-16 h-1 rounded-full" style={{ backgroundColor: "#1E3557" }}></div>
+            </div>
+
+            {/* Main Bio */}
+            <div className="space-y-6 mb-8 z-10 relative">
+              <p className="leading-relaxed text-justify" style={{ color: "#4A5568" }}>
+                I am a Senior Member of Institute of Electrical and Electronics
+                Engineers (IEEE USA), holding a Ph.D. in Electrical Engineering
+                from King Abdullah University of Science and Technology (KAUST)
+                in 2020, an M.S. in Communication Engineering from Chalmers
+                University of Technology, Sweden, in 2010 and a B.S. in
+                Electronics Engineering from COMSATS University Islamabad, in
+                2007.
+              </p>
+
+              <p className="leading-relaxed text-justify" style={{ color: "#4A5568" }}>
+                I am fundamentally an electrical engineer with a multitude of
+                expertise in engineering, computer science and artificial
+                intelligence. I always wished to get trained and contribute to
+                technically applied industry. The thirst of studying among
+                international students brought me to CHALMERS University of
+                Technology, Gothenburg, Sweden, where I accomplished my
+                master's in communication engineering, and where for the first
+                time, I experienced (i) academia and industry collaborating and
+                solving applied problems, and (ii) industries valuing and
+                onboarding multitude of talent. The passion for completing
+                education brought me to King Abdullah University of Science and
+                Technology (KAUST), KSA, for a Ph.D. in electrical engineering.
+              </p>
+            </div>
+
+            {/* Two Column Layout */}
+            <div className="grid grid-cols-1 z-10 relative md:grid-cols-2 gap-8">
+              {/* Interests */}
+              <div>
+                <h3 className="text-xl font-bold mb-4" style={{ color: "#1E3557" }}>Interests</h3>
+                <ul className="space-y-2">
+                  {interests.map((interest, idx) => (
+                    <li key={idx} className="flex items-start gap-3">
+                      <span className="text-lg font-bold mt-1" style={{ color: "#1E3557" }}>
+                        •
+                      </span>
+                      <span style={{ color: "#4A5568" }}>{interest}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Education */}
+              <div className="z-10 relative">
+                <h3 className="text-xl font-bold mb-4" style={{ color: "#1E3557" }}>Education</h3>
+                <div className="space-y-4">
+                  {education.map((edu, idx) => (
+                    <div key={idx} className="flex gap-3">
+                      <div
+                        className={`flex-shrink-0 w-10 h-10 rounded-lg bg-gradient-to-br ${edu.color} flex items-center justify-center text-white font-bold text-sm`}
+                      >
+                        📚
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-sm" style={{ color: "#1E3557" }}>
+                          {edu.degree}
+                        </p>
+                        <p className="text-xs mt-0.5" style={{ color: "#718096" }}>
+                          {edu.institution}
+                        </p>
+                        <div className="flex gap-2 mt-1">
+                          <span className="text-xs font-semibold" style={{ color: "#1E3557" }}>
+                            {edu.year}
+                          </span>
+                          <span className="text-xs" style={{ color: "#A0AEC0" }}>
+                            {edu.gpa}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Stats Section */}
-        <div className="w-full bg-gray-300 mt-8 h-0.5"></div>
-        <div className="mt-8 flex justify-center">
-          <button className="bg-[#1e3557] hover:bg-[#152848] text-white font-semibold py-3 px-8 rounded-lg transition-all duration-300 transform hover:translate-y-[-2px] shadow-lg hover:shadow-xl">
-            More Information
+        {/* Divider */}
+        <div className="w-full z-10 relative mt-12 h-px" style={{ backgroundColor: "#E2E8F0" }}></div>
+
+        {/* Footer CTA */}
+        <div className="mt-12 z-10 relative text-center">
+          <p className="mb-6" style={{ color: "#4A5568" }}>
+            Interested in collaboration or consultation?
+          </p>
+          <button className="px-8 py-3 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl" style={{ backgroundColor: "#1E3557" }}>
+            Get In Touch
           </button>
         </div>
       </div>

@@ -13,8 +13,9 @@ const Landing = () => {
     <>
         <Header />
         <Banner />
-        <Teach />
         <CertificatesSection />
+        <Teach />
+        
         <CoursesSection />
         <StudentsReviews />
         <FAQSection />
