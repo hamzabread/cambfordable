@@ -14,24 +14,27 @@ export default function BiographySection() {
   const education = [
     {
       degree: "Ph.D. in Electrical Engineering",
-      gpa: "(4.0/4.0)",
+      gpa: "(3.55/4.0)",
       year: "2020",
-      institution: "King Abdullah University of Science and Technology (KAUST)",
+      institution: "King Abdullah University of Science and Technology (KAUST), Saudi Arabia",
       color: "from-blue-500 to-blue-600",
+      logo: "/Logos/kaustlogo.png"
     },
     {
-      degree: "M.S. in Communication Engineering",
-      gpa: "(4.0/4.0)",
+      degree: "MS in Electrcal (Wireless Communication) Engineering",
+      gpa: "(4.5/5.0)",
       year: "2010",
       institution: "Chalmers University of Technology, Sweden",
       color: "from-emerald-500 to-emerald-600",
+      logo: "/Logos/chalmerslogo.png"
     },
     {
-      degree: "B.S. in Electronics Engineering",
-      gpa: "(3.99/4.0)",
+      degree: "BS in Electronics Engineering",
+      gpa: "(3.62/4.0)",
       year: "2007",
-      institution: "COMSATS University Islamabad",
+      institution: "COMSATS University Islamabad, Pakistan",
       color: "from-orange-500 to-orange-600",
+      logo: "/Logos/cuilogo.png"
     },
   ];
 
