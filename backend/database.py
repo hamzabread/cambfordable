@@ -1,7 +1,19 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 
-DATABASE_URL = "postgresql://postgres:cocomo@localhost:5432/cambfordable"
+BASE_DIR = Path(__file__).resolve().parent
+env_path = BASE_DIR / ".env"
+
+load_dotenv(dotenv_path=env_path)
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+print("🔍 DATABASE_URL loaded:", bool(DATABASE_URL))
+
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL not set. Check that .env is in the same folder as database.py and contains a DATABASE_URL entry.")
 
 engine = create_engine(DATABASE_URL)
 
