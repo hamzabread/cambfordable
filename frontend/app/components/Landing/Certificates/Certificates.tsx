@@ -20,7 +20,11 @@ export default function BiographySection() {
       institution:
         "King Abdullah University of Science and Technology (KAUST), Saudi Arabia",
       color: "from-blue-500 to-blue-600",
+<<<<<<< HEAD
+      logo: "assets/logos/kaustlogo.png"
+=======
       logo: "assets/Logos/kaustlogo.png",
+>>>>>>> b445d27cfaef288d55d036da7d651dfd3d93a639
     },
     {
       degree: "MS in Electrcal (Wireless Communication) Engineering",
@@ -28,7 +32,11 @@ export default function BiographySection() {
       year: "2010",
       institution: "Chalmers University of Technology, Sweden",
       color: "from-emerald-500 to-emerald-600",
+<<<<<<< HEAD
+      logo: "assets/logos/chalmerslogo.png"
+=======
       logo: "assets/Logos/chalmerslogo.png",
+>>>>>>> b445d27cfaef288d55d036da7d651dfd3d93a639
     },
     {
       degree: "BS in Electronics Engineering",
@@ -36,7 +44,11 @@ export default function BiographySection() {
       year: "2007",
       institution: "COMSATS University Islamabad, Pakistan",
       color: "from-orange-500 to-orange-600",
+<<<<<<< HEAD
+      logo: "assets/logos/cuilogo.png"
+=======
       logo: "assets/Logos/cuilogo.png",
+>>>>>>> b445d27cfaef288d55d036da7d651dfd3d93a639
     },
   ];
 
@@ -152,31 +164,21 @@ export default function BiographySection() {
                 className="leading-relaxed text-justify"
                 style={{ color: "#4A5568" }}
               >
-                I am a Senior Member of Institute of Electrical and Electronics
-                Engineers (IEEE USA), holding a Ph.D. in Electrical Engineering
-                from King Abdullah University of Science and Technology (KAUST)
-                in 2020, an M.S. in Communication Engineering from Chalmers
-                University of Technology, Sweden, in 2010 and a B.S. in
-                Electronics Engineering from COMSATS University Islamabad, in
-                2007.
+               I hold a Ph.D. in Electrical Engineering from King Abdullah University of Science and Technology (KAUST),
+               an M.S. in Communication Engineering from Chalmers University of Technology in Sweden, and 
+               a B.S. in Electronics Engineering from COMSATS University Islamabad. 
+               Each milestone has been a chapter in a journey filled with rich experiences, brilliant mentors, and wonderful people.
               </p>
 
               <p
                 className="leading-relaxed text-justify"
                 style={{ color: "#4A5568" }}
               >
-                I am fundamentally an electrical engineer with a multitude of
-                expertise in engineering, computer science and artificial
-                intelligence. I always wished to get trained and contribute to
-                technically applied industry. The thirst of studying among
-                international students brought me to CHALMERS University of
-                Technology, Gothenburg, Sweden, where I accomplished my master's
-                in communication engineering, and where for the first time, I
-                experienced (i) academia and industry collaborating and solving
-                applied problems, and (ii) industries valuing and onboarding
-                multitude of talent. The passion for completing education
-                brought me to King Abdullah University of Science and Technology
-                (KAUST), KSA, for a Ph.D. in electrical engineering.
+               I am fundamentally an electronics engineer at heart, a passion kindled in early childhood by watching 
+               my father — a radar technician who served the Pakistan Air Force for 25 years. 
+               He taught me to love the hum of machines, the logic of circuits, and the discipline of service. 
+               That fascination stayed with me through my undergraduate years at CUI, where I consistently ranked among the top three students,
+                earned semesterly scholarships, graduated with distinction, and was honored with two bronze medals for academic excellence.
               </p>
             </div>
 
@@ -239,7 +241,7 @@ export default function BiographySection() {
                           </span>
                           <span
                             className="text-xs"
-                            style={{ color: "#A0AEC0" }}
+                            style={{ color: "#70829aff" }}
                           >
                             {edu.gpa}
                           </span>
@@ -252,6 +254,13 @@ export default function BiographySection() {
             </div>
           </div>
         </div>
+
+
+
+
+
+
+
 
         {/* Divider */}
         <div
