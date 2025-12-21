@@ -54,7 +54,7 @@ export default function BiographySection() {
       className="py-16 relative px-4 sm:px-6 lg:px-8"
       style={{
         backgroundColor: "#F3F3F3",
-        backgroundImage: "url(/assets/certificate/blue-lines.jpg)",
+        backgroundImage: "url(/assets/certificate/alt-bg.jpg)",
         backgroundSize: "cover",
         backgroundPosition: "top",
       }}

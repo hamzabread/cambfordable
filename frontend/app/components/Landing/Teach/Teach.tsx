@@ -4,7 +4,7 @@ import Image from "next/image";
 const Teach = () => {
   return (
     <>
-      <div className=" relative bg-[#FBFDFF]">
+      <div className=" relative bg-[#FBFDFF] border-gray-300 border-b">
         <div className="max-w-[1300px] px-5 mx-auto flex flex-col md:flex-row justify-between gap-5 items-center py-10">
           <div className="flex z-10 flex-col gap-2.5 max-w-[600px]">
             <p className="text-[16px] text-black font-bold">How we teach</p>
