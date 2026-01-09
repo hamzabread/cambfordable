@@ -4,35 +4,27 @@ from models.courses import Course
 from models.users import User
 from schemas.courses import CourseOut, EnrolledCourseBase
 
-def enroll_user_in_course(
-    db: Session,
-    user: User,
-    course_id: int,
-):
-    course = db.query(Course).filter(Course.id == course_id).first()
-    if not course:
-        return None
+def create_enrollment(db: Session, user: User, course_id: int):
+    # check if enrollment already exists
+    enrollment = db.query(Enrollment).filter(
+        Enrollment.user_id == user.id,
+        Enrollment.course_id == course_id
+    ).first()
 
-    existing = (
-        db.query(Enrollment)
-        .filter(
-            Enrollment.user_id == user.id,
-            Enrollment.course_id == course_id,
-        )
-        .first()
-    )
-    if existing:
-        return existing
+    if enrollment:
+        return enrollment
 
+    # create new enrollment
     enrollment = Enrollment(
         user_id=user.id,
         course_id=course_id,
     )
-
     db.add(enrollment)
     db.commit()
     db.refresh(enrollment)
     return enrollment
+
+
 
 
 def get_user_enrollments(db: Session, user: User):

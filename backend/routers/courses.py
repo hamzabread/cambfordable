@@ -5,7 +5,7 @@ from database import get_db
 from core.security import get_current_user, get_current_admin
 from models.users import User
 from crud.enrollments import (
-    enroll_user_in_course,
+    create_enrollment,
     get_user_enrollments,
     get_user_courses_with_progress,
 )
@@ -21,7 +21,7 @@ def enroll_course(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    enrollment = enroll_user_in_course(db, current_user, course_id)
+    enrollment = create_enrollment(db, current_user, course_id)
     if not enrollment:
         raise HTTPException(status_code=404, detail="Course not found")
 

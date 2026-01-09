@@ -14,7 +14,7 @@ class LiveClass(Base):
     starts_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
     ends_at = Column(DateTime(timezone=True))
 
-    meeting_url = Column(String, nullable=False)
+    meeting_id = Column(String, nullable=False) #zoom sdk
 
     course = relationship("Course", back_populates="live_classes")
 

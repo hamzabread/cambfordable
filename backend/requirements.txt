@@ -17,3 +17,5 @@ pydantic[email]
 bcrypt<4.0
 redis
 websocket
+pydantic-settings
+requests

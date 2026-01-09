@@ -1,8 +1,10 @@
 # crud/payments.py
 from datetime import datetime, timezone
 from models.users import User
-from core.config import settings
+from core.jazz_config import settings
 from core.jazzcash import generate_secure_hash
+from sqlalchemy.orm import Session
+from models.payments import Payment
 
 def create_jazzcash_payment_payload(
     *,
@@ -38,3 +40,24 @@ def create_jazzcash_payment_payload(
         "payload": data,
         "payment_url": settings.JAZZCASH_PAYMENT_URL,
     }
+
+
+def create_pending_payment(
+    db: Session,
+    *,
+    user_id: int,
+    course_id: int,
+    txn_ref: str,
+    amount: int,
+):
+    payment = Payment(
+        user_id=user_id,
+        course_id=course_id,
+        txn_ref=txn_ref,
+        amount=amount,
+        status="PENDING"
+    )
+    db.add(payment)
+    db.commit()
+    db.refresh(payment)
+    return payment

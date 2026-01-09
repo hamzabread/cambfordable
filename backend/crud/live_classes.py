@@ -1,17 +1,43 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
 from models.live_classes import LiveClass
 from schemas.live_classes import LiveClassCreate
 from models.enrollments import Enrollment
 from models.users import User
 from fastapi import HTTPException
+from core.zoom_api import create_zoom_meeting
 
-def create_live_class(db: Session, live_class_in: LiveClassCreate):
-    live_class = LiveClass(**live_class_in.dict())
+async def create_live_class(db: Session, title: str, course_id: int, starts_at: datetime, duration: int = 60):
+    """
+    Creates a Zoom meeting dynamically and saves the live class in the database.
+    """
+    # 1. Create Zoom meeting
+    zoom_meeting = await create_zoom_meeting(topic=title, start_time=starts_at)
+
+    # 2. Save the live class in DB
+    live_class = LiveClass(
+        course_id=course_id,
+        title=title,
+        starts_at=starts_at,
+        ends_at=starts_at + timedelta(minutes=duration),
+        meeting_id=str(zoom_meeting["meeting_id"]),
+        # Note: we no longer need meeting_url in your model
+    )
+
     db.add(live_class)
     db.commit()
     db.refresh(live_class)
-    return live_class
+
+    return {
+        "id": live_class.id,
+        "title": live_class.title,
+        "course_id": live_class.course_id,
+        "starts_at": live_class.starts_at,
+        "ends_at": live_class.ends_at,
+        "meeting_id": live_class.meeting_id,
+        "join_url": zoom_meeting["join_url"],
+        "start_url": zoom_meeting["start_url"],  # secure, only for host
+    }
 
 
 def get_joinable_live_class(db: Session, *, class_id: int, user: User) -> LiveClass:
