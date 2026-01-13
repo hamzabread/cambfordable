@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from jose import jwt
 from passlib.context import CryptContext
 
-from core.config import SECRET_KEY, ALGORITHM, REFRESH_TOKEN_EXPIRE_MINUTES
+from backend.core.config_template import SECRET_KEY, ALGORITHM, REFRESH_TOKEN_EXPIRE_MINUTES
 
 from fastapi import Depends, HTTPException, status, WebSocket
 from fastapi.security import OAuth2PasswordBearer
