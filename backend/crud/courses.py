@@ -30,3 +30,4 @@ def create_course(db: Session, course_in: CourseCreate):
     db.commit()
     db.refresh(course)
     return course
+

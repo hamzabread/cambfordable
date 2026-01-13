@@ -12,6 +12,7 @@ from crud.enrollments import (
 from schemas.courses import CourseOut, EnrolledCourseBase
 from crud.courses import get_all_courses, create_course
 
+
 router = APIRouter(prefix="/courses", tags=["Courses"])
 
 
@@ -48,3 +49,5 @@ def admin_create_course(
     admin_user = Depends(get_current_admin)
 ):
     return create_course(db, course_in )
+
+

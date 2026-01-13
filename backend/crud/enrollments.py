@@ -51,3 +51,38 @@ def get_user_courses_with_progress(db: Session, user: User):
         )
         for e in enrollments
     ]
+
+
+def admin_enroll_user(
+    db: Session,
+    user_id: int,
+    course_id: int,
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return None, "user"
+
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if not course:
+        return None, "course"
+
+    existing = (
+        db.query(Enrollment)
+        .filter(
+            Enrollment.user_id == user_id,
+            Enrollment.course_id == course_id,
+        )
+        .first()
+    )
+    if existing:
+        return None, "exists"
+
+    enrollment = Enrollment(
+        user_id=user_id,
+        course_id=course_id,
+    )
+    db.add(enrollment)
+    db.commit()
+    db.refresh(enrollment)
+
+    return enrollment, None

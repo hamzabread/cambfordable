@@ -1,16 +1,17 @@
 "use client";
 
 import React, { useState } from "react";
-import { BookOpen, Video, Settings } from "lucide-react";
+import { BookOpen, Video, Settings, Users } from "lucide-react";
 import CreateCourseForm from "../Admin/CreateCourseForm";
 import CreateLiveClassForm from "../Admin/CreateLiveClassForm";
+import EnrollStudentForm from "../Admin/EnrollStudentForm";
 
 interface AdminPanelProps {
   isAdmin: boolean;
 }
 
 const AdminPanel = ({ isAdmin }: AdminPanelProps) => {
-  const [activeTab, setActiveTab] = useState<"courses" | "classes">("courses");
+  const [activeTab, setActiveTab] = useState<"courses" | "classes" | "enroll">("courses");
 
   if (!isAdmin) {
     return null;
@@ -27,15 +28,15 @@ const AdminPanel = ({ isAdmin }: AdminPanelProps) => {
           </h2>
         </div>
         <p className="text-slate-600">
-          Create and manage courses and live classes
+          Create and manage courses, live classes, and student enrollments
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 border-b border-slate-200">
+      <div className="flex gap-4 border-b border-slate-200 overflow-x-auto">
         <button
           onClick={() => setActiveTab("courses")}
-          className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition ${
+          className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition whitespace-nowrap ${
             activeTab === "courses"
               ? "border-slate-900 text-slate-900"
               : "border-transparent text-slate-600 hover:text-slate-900"
@@ -46,7 +47,7 @@ const AdminPanel = ({ isAdmin }: AdminPanelProps) => {
         </button>
         <button
           onClick={() => setActiveTab("classes")}
-          className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition ${
+          className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition whitespace-nowrap ${
             activeTab === "classes"
               ? "border-slate-900 text-slate-900"
               : "border-transparent text-slate-600 hover:text-slate-900"
@@ -54,6 +55,17 @@ const AdminPanel = ({ isAdmin }: AdminPanelProps) => {
         >
           <Video className="w-5 h-5" />
           Create Live Class
+        </button>
+        <button
+          onClick={() => setActiveTab("enroll")}
+          className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition whitespace-nowrap ${
+            activeTab === "enroll"
+              ? "border-slate-900 text-slate-900"
+              : "border-transparent text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          <Users className="w-5 h-5" />
+          Enroll Student
         </button>
       </div>
 
@@ -63,6 +75,7 @@ const AdminPanel = ({ isAdmin }: AdminPanelProps) => {
         <div>
           {activeTab === "courses" && <CreateCourseForm />}
           {activeTab === "classes" && <CreateLiveClassForm />}
+          {activeTab === "enroll" && <EnrollStudentForm />}
         </div>
 
         {/* Info Panel */}
@@ -71,7 +84,9 @@ const AdminPanel = ({ isAdmin }: AdminPanelProps) => {
             <h3 className="text-lg font-bold text-slate-900 mb-4">
               {activeTab === "courses"
                 ? "Course Guidelines"
-                : "Live Class Guidelines"}
+                : activeTab === "classes"
+                ? "Live Class Guidelines"
+                : "Enrollment Guidelines"}
             </h3>
 
             {activeTab === "courses" ? (
@@ -109,7 +124,7 @@ const AdminPanel = ({ isAdmin }: AdminPanelProps) => {
                   </p>
                 </div>
               </div>
-            ) : (
+            ) : activeTab === "classes" ? (
               <div className="space-y-4 text-sm text-slate-600">
                 <div>
                   <h4 className="font-semibold text-slate-900 mb-1">
@@ -149,6 +164,41 @@ const AdminPanel = ({ isAdmin }: AdminPanelProps) => {
                   <p className="text-green-800 text-xs font-medium">
                     ✅ Classes are automatically marked as "LIVE" during the
                     scheduled time.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 text-sm text-slate-600">
+                <div>
+                  <h4 className="font-semibold text-slate-900 mb-1">
+                    🔍 Search Students
+                  </h4>
+                  <p>
+                    Use the search bar to find students by name, username, or
+                    email address.
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-slate-900 mb-1">
+                    👤 Single Selection
+                  </h4>
+                  <p>
+                    Click on a student to select them. Only one student can be
+                    enrolled at a time.
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-slate-900 mb-1">
+                    📚 Course Selection
+                  </h4>
+                  <p>
+                    Choose which course to enroll the student into.
+                  </p>
+                </div>
+                <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                  <p className="text-purple-800 text-xs font-medium">
+                    ✅ Instant confirmation upon successful enrollment. Students
+                    will see the course in their dashboard immediately.
                   </p>
                 </div>
               </div>
