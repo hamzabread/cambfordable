@@ -18,7 +18,19 @@ class LiveClass(Base):
 
     course = relationship("Course", back_populates="live_classes")
 
+    meeting_password = Column(String, nullable=True)
+
     @property
     def is_live(self) -> bool:
         now = datetime.now(timezone.utc)
         return self.starts_at <= now <= self.ends_at
+
+    @property
+    def join_url(self) -> str:
+        """Generate join URL from meeting ID"""
+        return f"https://zoom.us/wc/join/{self.meeting_id}"
+
+    @property
+    def start_url(self) -> str:
+        """Generate start URL for host"""
+        return f"https://zoom.us/wc/start/{self.meeting_id}"

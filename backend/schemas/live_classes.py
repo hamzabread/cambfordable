@@ -18,6 +18,7 @@ class LiveClassJoin(BaseModel):
     sdk_key: str
     user_name: str
     starts_at: datetime
+    password: str | None = None
 
     class Config:
         from_attributes = True

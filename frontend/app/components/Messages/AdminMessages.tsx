@@ -17,6 +17,8 @@ interface LiveClass {
   course_id: number;
   starts_at: string;
   ends_at: string;
+  meeting_id: string;
+  join_url: string;
 }
 
 interface User {
@@ -77,6 +79,8 @@ const AdminMessages = ({ user }: AdminMessagesProps) => {
             course_id: 1,
             starts_at: new Date().toISOString(),
             ends_at: new Date(Date.now() + 3600000).toISOString(),
+            meeting_id: "12345",
+            join_url: "http://localhost:8000/zoom/12345",
           },
         ]);
       } finally {

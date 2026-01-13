@@ -5,6 +5,7 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import Sidebar from "../components/Dashboard/Sidebar";
 import Header from "../components/Dashboard/Header";
+import ZoomProvider from "../components/ZoomProvider";
 import {
   Video,
   Calendar,
@@ -13,6 +14,7 @@ import {
   Loader,
   ExternalLink,
   CheckCircle,
+  X,
 } from "lucide-react";
 
 interface LiveClass {
@@ -21,7 +23,8 @@ interface LiveClass {
   title: string;
   starts_at: string;
   ends_at: string;
-  meeting_url: string;
+  meeting_id: string;
+  join_url: string;
   is_live: boolean;
 }
 
@@ -41,6 +44,7 @@ const LiveClassesPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [filterCourse, setFilterCourse] = useState<number | null>(null);
+  const [activeMeeting, setActiveMeeting] = useState<any>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -101,7 +105,8 @@ const LiveClassesPage = () => {
               title: "Chemistry Lecture - Organic Reactions",
               starts_at: new Date(Date.now() + 3600000).toISOString(),
               ends_at: new Date(Date.now() + 7200000).toISOString(),
-              meeting_url: "https://zoom.us/j/example1",
+              meeting_id: "123456789",
+              join_url: "https://zoom.us/j/example1",
               is_live: true,
             },
             {
@@ -110,7 +115,8 @@ const LiveClassesPage = () => {
               title: "Mathematics - Calculus Session",
               starts_at: new Date(Date.now() + 7200000).toISOString(),
               ends_at: new Date(Date.now() + 10800000).toISOString(),
-              meeting_url: "https://zoom.us/j/example2",
+              meeting_id: "987654321",
+              join_url: "https://zoom.us/j/example2",
               is_live: false,
             },
           ]);
@@ -127,42 +133,25 @@ const LiveClassesPage = () => {
     fetchData();
   }, [router]);
 
-  const handleJoinClass = async (classId: number, meetingUrl: string) => {
+  const handleJoinClass = async (classId: number) => {
     const token = localStorage.getItem("access_token");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
+    if (!token) return router.push("/login");
 
     try {
       setJoiningId(classId);
       setError(null);
 
-      // Get join details from backend
+      // Get credentials from your API
       const response = await axios.get(
-        `http://localhost:8000/live-classes/${classId}/join`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        `http://localhost:8000/live-classes/${classId}/zoom-sdk`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Open the Zoom URL in a new window
-      const zoomUrl = response.data.zoom_url || meetingUrl;
-      if (zoomUrl) {
-        window.open(zoomUrl, "_blank");
-      }
+      // Set active meeting - This triggers the ZoomProvider to mount
+      setActiveMeeting(response.data);
     } catch (err: any) {
-      console.error("Error joining class:", err);
-
-      // Fallback: open the meeting URL directly
-      if (!err.response) {
-        window.open(meetingUrl, "_blank");
-      } else {
-        setError(
-          err.response?.data?.detail ||
-            "Failed to join class. Please try again."
-        );
-      }
+      console.error("Zoom Join Error:", err);
+      setError(err.message || "Failed to join class");
     } finally {
       setJoiningId(null);
     }
@@ -240,12 +229,30 @@ const LiveClassesPage = () => {
     <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden relative">
         <div className="lg:hidden h-14"></div>
         <Header
           user={user}
           onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
         />
+
+        {/* ZOOM OVERLAY - Renders only when activeMeeting exists */}
+        {activeMeeting && (
+          <div className="fixed inset-0 z-[60] bg-black flex flex-col">
+            <div className="bg-slate-900 p-4 flex justify-between items-center text-white">
+              <span className="font-bold">Live Classroom: {activeMeeting.meeting_id}</span>
+              <button 
+                onClick={() => setActiveMeeting(null)}
+                className="p-2 hover:bg-slate-700 rounded-full transition"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="flex-1 bg-black">
+              <ZoomProvider meetingData={activeMeeting} />
+            </div>
+          </div>
+        )}
 
         <main className="flex-1 overflow-auto">
           <div className="p-4 sm:p-6 lg:p-8 space-y-8">
@@ -352,9 +359,7 @@ const LiveClassesPage = () => {
 
                       {/* Join Button */}
                       <button
-                        onClick={() =>
-                          handleJoinClass(liveClass.id, liveClass.meeting_url)
-                        }
+                        onClick={() => handleJoinClass(liveClass.id)}
                         disabled={joiningId === liveClass.id}
                         className="w-full px-4 py-3 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 disabled:opacity-70 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
                       >
@@ -419,9 +424,7 @@ const LiveClassesPage = () => {
 
                       {/* Join Button */}
                       <button
-                        onClick={() =>
-                          handleJoinClass(liveClass.id, liveClass.meeting_url)
-                        }
+                        onClick={() => handleJoinClass(liveClass.id)}
                         disabled={joiningId === liveClass.id}
                         className="w-full px-4 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-70 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
                       >

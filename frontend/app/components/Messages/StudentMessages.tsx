@@ -15,8 +15,10 @@ interface LiveClass {
   id: number;
   title: string;
   course_id: number;
-  starts_at: any;
-  ends_at: any;
+  starts_at: string;
+  ends_at: string;
+  meeting_id: string;
+  join_url: string;
 }
 
 interface User {

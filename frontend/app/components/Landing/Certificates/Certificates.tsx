@@ -20,11 +20,7 @@ export default function BiographySection() {
       institution:
         "King Abdullah University of Science and Technology (KAUST), Saudi Arabia",
       color: "from-blue-500 to-blue-600",
-<<<<<<< HEAD
-      logo: "assets/logos/kaustlogo.png"
-=======
       logo: "assets/Logos/kaustlogo.png",
->>>>>>> b445d27cfaef288d55d036da7d651dfd3d93a639
     },
     {
       degree: "MS in Electrcal (Wireless Communication) Engineering",
@@ -32,11 +28,7 @@ export default function BiographySection() {
       year: "2010",
       institution: "Chalmers University of Technology, Sweden",
       color: "from-emerald-500 to-emerald-600",
-<<<<<<< HEAD
-      logo: "assets/logos/chalmerslogo.png"
-=======
       logo: "assets/Logos/chalmerslogo.png",
->>>>>>> b445d27cfaef288d55d036da7d651dfd3d93a639
     },
     {
       degree: "BS in Electronics Engineering",
@@ -44,11 +36,7 @@ export default function BiographySection() {
       year: "2007",
       institution: "COMSATS University Islamabad, Pakistan",
       color: "from-orange-500 to-orange-600",
-<<<<<<< HEAD
-      logo: "assets/logos/cuilogo.png"
-=======
       logo: "assets/Logos/cuilogo.png",
->>>>>>> b445d27cfaef288d55d036da7d651dfd3d93a639
     },
   ];
 

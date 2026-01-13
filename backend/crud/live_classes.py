@@ -21,6 +21,7 @@ async def create_live_class(db: Session, title: str, course_id: int, starts_at: 
         starts_at=starts_at,
         ends_at=starts_at + timedelta(minutes=duration),
         meeting_id=str(zoom_meeting["meeting_id"]),
+        meeting_password=zoom_meeting.get("password")
         # Note: we no longer need meeting_url in your model
     )
 
@@ -35,6 +36,7 @@ async def create_live_class(db: Session, title: str, course_id: int, starts_at: 
         "starts_at": live_class.starts_at,
         "ends_at": live_class.ends_at,
         "meeting_id": live_class.meeting_id,
+        "meeting_password": live_class.meeting_password,
         "join_url": zoom_meeting["join_url"],
         "start_url": zoom_meeting["start_url"],  # secure, only for host
     }

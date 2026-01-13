@@ -38,9 +38,13 @@ async def create_zoom_meeting(topic: str, start_time: datetime):
         "duration": 60,
         "settings": {
             "host_video": True,
-            "participant_video": True,
-            "join_before_host": False,
-            "mute_upon_entry": True,
+            "participant_video": False,     # 1. Hide student videos by default
+            "mute_upon_entry": True,        # 2. Force mute everyone on join
+            "participant_mic_before_host": False,
+            "waiting_room": False,
+            # This setting prevents participants from seeing each other in some versions
+            "meeting_authentication": False, 
+            "jbh_time": 0,
         },
     }
 
@@ -56,6 +60,7 @@ async def create_zoom_meeting(topic: str, start_time: datetime):
         data = resp.json()
         return {
             "meeting_id": data["id"],
-            "join_url": data["join_url"],      # for participants
-            "start_url": data["start_url"],    # for host
+            "password": data.get("password"),  # Add this line!
+            "join_url": data["join_url"],
+            "start_url": data["start_url"],
         }

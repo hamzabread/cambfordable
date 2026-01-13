@@ -15,8 +15,7 @@ const CreateLiveClassForm = () => {
     course_id: "",
     title: "",
     starts_at: "",
-    ends_at: "",
-    meeting_url: "",
+    duration: "60",
   });
 
   const [courses, setCourses] = useState<Course[]>([]);
@@ -70,23 +69,17 @@ const CreateLiveClassForm = () => {
       !formData.course_id ||
       !formData.title ||
       !formData.starts_at ||
-      !formData.ends_at ||
-      !formData.meeting_url
+      !formData.duration
     ) {
       setError("All fields are required");
       return;
     }
 
     const startTime = new Date(formData.starts_at);
-    const endTime = new Date(formData.ends_at);
+    const durationMinutes = parseInt(formData.duration);
 
-    if (endTime <= startTime) {
-      setError("End time must be after start time");
-      return;
-    }
-
-    if (!formData.meeting_url.includes("http")) {
-      setError("Meeting URL must start with http:// or https://");
+    if (isNaN(durationMinutes) || durationMinutes <= 0) {
+      setError("Duration must be a positive number");
       return;
     }
 
@@ -100,8 +93,7 @@ const CreateLiveClassForm = () => {
           course_id: Number(formData.course_id),
           title: formData.title,
           starts_at: startTime.toISOString(),
-          ends_at: endTime.toISOString(),
-          meeting_url: formData.meeting_url,
+          duration: durationMinutes,
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -121,8 +113,7 @@ const CreateLiveClassForm = () => {
         course_id: "",
         title: "",
         starts_at: "",
-        ends_at: "",
-        meeting_url: "",
+        duration: "60",
       });
 
       setTimeout(() => setSuccess(null), 3000);
@@ -241,40 +232,23 @@ const CreateLiveClassForm = () => {
           </p>
         </div>
 
-        {/* End Time */}
+        {/* Duration */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">
-            End Time *
+            Duration (minutes) *
           </label>
           <input
-            type="datetime-local"
-            name="ends_at"
-            value={formData.ends_at}
+            type="number"
+            name="duration"
+            value={formData.duration}
             onChange={handleChange}
+            min="15"
+            max="480"
             required
             className="w-full px-4 py-3 border text-black placeholder:text-[#b3b3b3] border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition"
           />
           <p className="text-xs text-slate-500 mt-1">
-            When the class ends
-          </p>
-        </div>
-
-        {/* Meeting URL */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Meeting URL *
-          </label>
-          <input
-            type="url"
-            name="meeting_url"
-            value={formData.meeting_url}
-            onChange={handleChange}
-            placeholder="https://zoom.us/j/... or https://meet.google.com/..."
-            required
-            className="w-full px-4 py-3 border text-black placeholder:text-[#b3b3b3] border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition"
-          />
-          <p className="text-xs text-slate-500 mt-1">
-            Zoom, Google Meet, or other meeting platform URL
+            How long the class will run (15-480 minutes)
           </p>
         </div>
 
