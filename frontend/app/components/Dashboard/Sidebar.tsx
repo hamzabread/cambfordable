@@ -122,7 +122,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
       >
         {/* Logo & Close Button */}
         <div className="p-6 border-b border-slate-700 flex items-center justify-between">
+          <Link href="/">
           <h1 className="text-2xl font-bold">Cambfordable</h1>
+          </Link>
           <button
             onClick={() => setSidebarOpen(false)}
             className="p-2 hover:bg-slate-700 rounded-lg transition"
