@@ -188,20 +188,7 @@ export default function StudentsReviews() {
         </div>
 
         {/* Stats Section */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-16 pt-12 border-t border-gray-300">
-          <div className="text-center">
-            <p className="text-4xl font-bold text-gray-900 mb-2">500+</p>
-            <p className="text-gray-700 font-medium">Students Taught</p>
-          </div>
-          <div className="text-center">
-            <p className="text-4xl font-bold text-gray-900 mb-2">4.9★</p>
-            <p className="text-gray-700 font-medium">Average Rating</p>
-          </div>
-          <div className="text-center">
-            <p className="text-4xl font-bold text-gray-900 mb-2">99%</p>
-            <p className="text-gray-700 font-medium">Pass Rate</p>
-          </div>
-        </div>
+      
       </div>
 
       <style jsx>{`

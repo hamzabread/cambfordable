@@ -56,7 +56,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
       <aside className="hidden lg:flex w-64 bg-linear-to-b from-slate-900 to-slate-800 text-white flex-col h-screen shadow-xl">
         {/* Logo */}
         <div className="p-6 border-b border-slate-700">
+          <Link href="/">
           <h1 className="text-2xl font-bold">Cambridge</h1>
+          </Link>
         </div>
 
         {/* Navigation Menu */}

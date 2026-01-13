@@ -12,34 +12,6 @@ export default function BiographySection() {
     { icon: Twitter, href: "#", label: "Twitter" },
   ];
 
-  const education = [
-    {
-      degree: "Ph.D. in Electrical Engineering",
-      gpa: "(3.55/4.0)",
-      year: "2020",
-      institution:
-        "King Abdullah University of Science and Technology (KAUST), Saudi Arabia",
-      color: "from-blue-500 to-blue-600",
-      logo: "assets/Logos/kaustlogo.png",
-    },
-    {
-      degree: "MS in Electrcal (Wireless Communication) Engineering",
-      gpa: "(4.5/5.0)",
-      year: "2010",
-      institution: "Chalmers University of Technology, Sweden",
-      color: "from-emerald-500 to-emerald-600",
-      logo: "assets/Logos/chalmerslogo.png",
-    },
-    {
-      degree: "BS in Electronics Engineering",
-      gpa: "(3.62/4.0)",
-      year: "2007",
-      institution: "COMSATS University Islamabad, Pakistan",
-      color: "from-orange-500 to-orange-600",
-      logo: "assets/Logos/cuilogo.png",
-    },
-  ];
-
   const interests = [
     "Electrical Engineering",
     "Computer Science",
@@ -59,15 +31,10 @@ export default function BiographySection() {
         backgroundPosition: "top",
       }}
     >
-      {/* <Image
-        src="/assets/certificate/certificate-bg.png"
-        alt="Background"
-        fill
-        priority
-        className="object-cover object-center absolute inset-0 z-100"
-        sizes="100vw"
-      /> */}
-      <div className="max-w-7xl z-10 mx-auto">
+      {/* Blur Overlay */}
+      <div className="absolute inset-0 z-0 backdrop-blur-[3px]"></div>
+
+      <div className="max-w-7xl z-10 mx-auto relative">
         {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
           {/* Left Column - Profile */}
@@ -81,21 +48,21 @@ export default function BiographySection() {
               </div>
 
               {/* Name and Title */}
-              <div className="text-center relative z-10">
+              <div className="text-center">
                 <h1 className="text-3xl text-black font-bold mb-2">
                   Ali Imran
                 </h1>
-                <p className="text-slate-500 z-10 text-sm mb-1">
+                <p className="text-slate-800 font-extrabold text-sm mb-1">
                   Senior Member IEEE USA
                 </p>
-                <p className="text-slate-400 text-xs">
+                <p className="text-slate-900 font-extrabold text-sm">
                   Ph.D. Electrical Engineering
                 </p>
               </div>
             </div>
 
             {/* Social Links */}
-            <div className="flex z-10 relative justify-center gap-4 mb-8">
+            <div className="flex justify-center gap-4 mb-8">
               {socialLinks.map((social) => {
                 const Icon = social.icon;
                 return (
@@ -114,7 +81,7 @@ export default function BiographySection() {
 
             {/* Download CV Button */}
             <button
-              className="w-full relative z-10 px-4 py-2.5 text-white font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 mb-8 hover:opacity-90"
+              className="w-full px-4 py-2.5 text-white font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 mb-8 hover:opacity-90"
               style={{ backgroundColor: "#1E3557" }}
             >
               <Download className="w-4 h-4" />
@@ -122,7 +89,7 @@ export default function BiographySection() {
             </button>
 
             {/* Quick Stats */}
-            <div className="space-y-3 z-10 relative">
+            <div className="space-y-3">
               <div
                 className="rounded-lg p-4"
                 style={{ backgroundColor: "#E8EEF7" }}
@@ -136,7 +103,7 @@ export default function BiographySection() {
           </div>
 
           {/* Right Column - Biography */}
-          <div className="lg:col-span-2 z-10 relative">
+          <div className="lg:col-span-2">
             {/* Header */}
             <div className="mb-8">
               <h2 className="text-4xl text-black font-bold mb-6">Biography</h2>
@@ -147,10 +114,10 @@ export default function BiographySection() {
             </div>
 
             {/* Main Bio */}
-            <div className="space-y-6 mb-8 z-10 relative">
+            <div className="space-y-6 mb-8">
               <p
-                className="leading-relaxed text-justify"
-                style={{ color: "#4A5568" }}
+                className="leading-relaxed text-justify font-bold"
+                style={{ color: "#000" }}
               >
                I hold a Ph.D. in Electrical Engineering from King Abdullah University of Science and Technology (KAUST),
                an M.S. in Communication Engineering from Chalmers University of Technology in Sweden, and 
@@ -159,8 +126,8 @@ export default function BiographySection() {
               </p>
 
               <p
-                className="leading-relaxed text-justify"
-                style={{ color: "#4A5568" }}
+                className="leading-relaxed text-justify font-bold"
+                style={{ color: "#000" }}
               >
                I am fundamentally an electronics engineer at heart, a passion kindled in early childhood by watching 
                my father — a radar technician who served the Pakistan Air Force for 25 years. 
@@ -171,94 +138,152 @@ export default function BiographySection() {
             </div>
 
             {/* Two Column Layout */}
-            <div className="grid grid-cols-1 z-10 relative md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Interests */}
               <div>
                 <h3
                   className="text-xl font-bold mb-4"
-                  style={{ color: "#1E3557" }}
+                  style={{ color: "#000" }}
                 >
                   Interests
                 </h3>
                 <ul className="space-y-2">
                   {interests.map((interest, idx) => (
-                    <li key={idx} className="flex items-center gap-3">
+                    <li key={idx} className="flex font-semibold items-center gap-3">
                       <span
                         className="text-lg font-bold mt-1"
-                        style={{ color: "#1E3557" }}
+                        style={{ color: "#000" }}
                       >
                         •
                       </span>
-                      <span style={{ color: "#4A5568" }}>{interest}</span>
+                      <span style={{ color: "#000" }}>{interest}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              {/* Education */}
-              <div className="z-10 relative">
+              {/* Education - Hardcoded */}
+              <div>
                 <h3
                   className="text-xl font-bold mb-4"
-                  style={{ color: "#1E3557" }}
+                  style={{ color: "#111" }}
                 >
                   Education
                 </h3>
                 <div className="space-y-4">
-                  {education.map((edu, idx) => (
-                    <div key={idx} className="flex gap-3">
-                      <img src={edu.logo} className="w-10 h-10" alt="" />
-                      <div className="flex-1">
-                        <p
-                          className="font-semibold text-sm"
-                          style={{ color: "#1E3557" }}
+                  {/* Ph.D. */}
+                  <div className="flex gap-3">
+                    <img src="assets/Logos/kaustlogo.png" className="w-10 h-10" alt="KAUST" />
+                    <div className="flex-1">
+                      <p
+                        className="font-bold text-sm"
+                        style={{ color: "#111" }}
+                      >
+                        Ph.D. in Electrical Engineering
+                      </p>
+                      <p
+                        className="text-xs mt-0.5"
+                        style={{ color: "#111" }}
+                      >
+                        King Abdullah University of Science and Technology (KAUST), Saudi Arabia
+                      </p>
+                      <div className="flex gap-2 mt-1">
+                        <span
+                          className="text-xs font-semibold"
+                          style={{ color: "#111" }}
                         >
-                          {edu.degree}
-                        </p>
-                        <p
-                          className="text-xs mt-0.5"
-                          style={{ color: "#718096" }}
+                          2020
+                        </span>
+                        <span
+                          className="text-xs"
+                          style={{ color: "#111" }}
                         >
-                          {edu.institution}
-                        </p>
-                        <div className="flex gap-2 mt-1">
-                          <span
-                            className="text-xs font-semibold"
-                            style={{ color: "#1E3557" }}
-                          >
-                            {edu.year}
-                          </span>
-                          <span
-                            className="text-xs"
-                            style={{ color: "#70829aff" }}
-                          >
-                            {edu.gpa}
-                          </span>
-                        </div>
+                          (3.55/4.0)
+                        </span>
                       </div>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* MS */}
+                  <div className="flex gap-3">
+                    <img src="assets/Logos/chalmerslogo.png" className="w-10 h-10" alt="Chalmers" />
+                    <div className="flex-1">
+                      <p
+                        className="font-bold text-sm"
+                        style={{ color: "#111" }}
+                      >
+                        MS in Electrical (Wireless Communication) Engineering
+                      </p>
+                      <p
+                        className="text-xs mt-0.5"
+                        style={{ color: "#111" }}
+                      >
+                        Chalmers University of Technology, Sweden
+                      </p>
+                      <div className="flex gap-2 mt-1">
+                        <span
+                          className="text-xs font-semibold"
+                          style={{ color: "#111" }}
+                        >
+                          2010
+                        </span>
+                        <span
+                          className="text-xs"
+                          style={{ color: "#111" }}
+                        >
+                          (4.5/5.0)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* BS */}
+                  <div className="flex gap-3 relative">
+                    <img src="assets/Logos/cuilogo.png" className="w-20 h-10 left-[-20px] absolute" alt="COMSATS" />
+                    <div className="flex-1 ml-13">
+                      <p
+                        className="font-bold text-sm"
+                        style={{ color: "#111" }}
+                      >
+                        BS in Electronics Engineering
+                      </p>
+                      <p
+                        className="text-xs mt-0.5"
+                        style={{ color: "#111" }}
+                      >
+                        COMSATS University Islamabad, Pakistan
+                      </p>
+                      <div className="flex gap-2 mt-1">
+                        <span
+                          className="text-xs font-semibold"
+                          style={{ color: "#111" }}
+                        >
+                          2007
+                        </span>
+                        <span
+                          className="text-xs"
+                          style={{ color: "#111" }}
+                        >
+                          (3.62/4.0)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-
-
-
-
-
-
-
         {/* Divider */}
         <div
-          className="w-full z-10 relative mt-12 h-px"
+          className="w-full mt-12 h-px"
           style={{ backgroundColor: "#E2E8F0" }}
         ></div>
 
         {/* Footer CTA */}
-        <div className="mt-12 z-10 relative text-center">
-          <p className="mb-6" style={{ color: "#4A5568" }}>
+        <div className="mt-12 text-center">
+          <p className="mb-6" style={{ color: "#000" }}>
             Interested in collaboration or consultation?
           </p>
           <button

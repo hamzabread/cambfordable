@@ -1,13 +1,26 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const pathname = usePathname();
 
   const isHome = pathname !== "/login" && pathname !== "/signup";
+
+  // Check if user is logged in
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    setIsLoggedIn(!!token);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    setIsLoggedIn(false);
+    window.location.href = "/";
+  };
 
   return (
     <>
@@ -49,15 +62,32 @@ const Header = () => {
           )}
           {isHome && (
             <div className="flex items-center gap-4">
-              <Link href="/login">
-                <button className="p-3 py-1.5 cursor-pointer text-[18px] bg-white text-black rounded-md">
-                  Login
-                </button>
-              </Link>
-
-              <button className="p-4 py-1.5 cursor-pointer text-[18px] border border-white/50 text-white rounded-md">
-                Join
-              </button>
+              {isLoggedIn ? (
+                <>
+                  <Link href="/dashboard">
+                    <button className="p-3 py-1.5 cursor-pointer text-[18px] bg-white text-black rounded-md">
+                      Dashboard
+                    </button>
+                  </Link>
+                  <button 
+                    onClick={handleLogout}
+                    className="p-4 py-1.5 cursor-pointer text-[18px] border border-white/50 text-white rounded-md hover:bg-white/10 transition"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login">
+                    <button className="p-3 py-1.5 cursor-pointer text-[18px] bg-white text-black rounded-md">
+                      Login
+                    </button>
+                  </Link>
+                  <button className="p-4 py-1.5 cursor-pointer text-[18px] border border-white/50 text-white rounded-md">
+                    Join
+                  </button>
+                </>
+              )}
             </div>
           )}
         </nav>
@@ -163,12 +193,33 @@ const Header = () => {
             </ul>
             <div className="mt-auto pt-6 border-b border-gray-600">
               <div className="flex flex-col gap-3 absolute bottom-2.5 left-2.5 right-2.5">
-                <button className="w-full bg-white rounded-md px-5 py-3 text-[#1e3557] font-semibold">
-                  Login
-                </button>
-                <button className="w-full border border-white/50 text-white rounded-md px-5 py-3 font-semibold">
-                  Join
-                </button>
+                {isLoggedIn ? (
+                  <>
+                    <Link href="/dashboard" onClick={() => setIsOpen(false)}>
+                      <button className="w-full bg-white rounded-md px-5 py-3 text-[#1e3557] font-semibold">
+                        Dashboard
+                      </button>
+                    </Link>
+                    <button 
+                      onClick={() => {
+                        handleLogout();
+                        setIsOpen(false);
+                      }}
+                      className="w-full border border-white/50 text-white rounded-md px-5 py-3 font-semibold hover:bg-white/10 transition"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button className="w-full bg-white rounded-md px-5 py-3 text-[#1e3557] font-semibold">
+                      Login
+                    </button>
+                    <button className="w-full border border-white/50 text-white rounded-md px-5 py-3 font-semibold">
+                      Join
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
