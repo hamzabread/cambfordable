@@ -12,7 +12,7 @@ from schemas.users import UserCreate, UserBase, UserMe
 from schemas.auth import Token
 from crud.users import get_user_by_username, get_user_by_email, create_user
 from core.hashing import get_password_hash, verify_password
-from backend.core.config_template import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM
+from core.config_template import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_MINUTES, SECRET_KEY, ALGORITHM
 from core.security import create_access_token, create_refresh_token, get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Auth"])

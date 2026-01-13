@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
-from backend.core.config_template import SECRET_KEY, ALGORITHM
+from core.config_template import SECRET_KEY, ALGORITHM
 from database.session import get_db
 from crud.users import get_user_by_username
 
