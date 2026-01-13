@@ -42,7 +42,7 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
 
         // Fetch enrolled courses
         const coursesRes = await axios.get(
-          "http://localhost:8000/courses/me",
+          `${process.env.NEXT_PUBLIC_API_URL}/courses/me`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -51,7 +51,7 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
 
         // Fetch submissions to check which are already submitted
         const submissionsRes = await axios.get(
-          "http://localhost:8000/homeworks/me",
+          `${process.env.NEXT_PUBLIC_API_URL}/homeworks/me`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -65,7 +65,7 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
         const allHomeworks: Homework[] = [];
         for (const course of coursesRes.data) {
           const hwRes = await axios.get(
-            `http://localhost:8000/homeworks/course/${course.id}`,
+            `${process.env.NEXT_PUBLIC_API_URL}/homeworks/course/${course.id}`,
             {
               headers: { Authorization: `Bearer ${token}` },
             }

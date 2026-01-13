@@ -77,7 +77,7 @@ const HomeworkSubmitModal = ({
       formData.append("file", file);
 
       const response = await axios.post(
-        `http://localhost:8000/homeworks/${homework.id}/submit`,
+        `${process.env.NEXT_PUBLIC_API_URL}/homeworks/${homework.id}/submit`,
         formData,
         {
           headers: {

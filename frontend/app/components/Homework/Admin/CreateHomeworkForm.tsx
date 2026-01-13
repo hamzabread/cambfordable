@@ -77,7 +77,7 @@ const CreateHomeworkForm = ({
       const token = localStorage.getItem("access_token");
 
       const response = await axios.post(
-        "http://localhost:8000/homeworks/",
+        `${process.env.NEXT_PUBLIC_API_URL}/homeworks/`,
         {
           course_id: Number(formData.course_id),
           title: formData.title,

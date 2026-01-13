@@ -45,7 +45,7 @@ const CreateCourseForm = ({}: CreateCourseFormProps) => {
       const token = localStorage.getItem("access_token");
 
       const response = await axios.post(
-        "http://localhost:8000/courses/",
+        `${process.env.NEXT_PUBLIC_API_URL}/courses/`,
         {
           id: Number(formData.id),
           name: formData.name,

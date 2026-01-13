@@ -29,7 +29,7 @@ const LoginPage = () => {
       data.append("password", formData.password);
 
       const response = await axios.post(
-        "http://localhost:8000/auth/login",
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
         data,
         { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
       );

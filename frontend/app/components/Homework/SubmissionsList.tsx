@@ -50,7 +50,7 @@ const SubmissionsList = ({ user }: SubmissionsListProps) => {
 
         // Fetch submissions
         const submissionsRes = await axios.get(
-          "http://localhost:8000/homeworks/me",
+          `${process.env.NEXT_PUBLIC_API_URL}/homeworks/me`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -70,7 +70,7 @@ const SubmissionsList = ({ user }: SubmissionsListProps) => {
           if (!hwInfoMap[submission.homework_id]) {
             try {
               const hwRes = await axios.get(
-                `http://localhost:8000/homeworks/${submission.homework_id}`,
+                `${process.env.NEXT_PUBLIC_API_URL}/homeworks/${submission.homework_id}`,
                 {
                   headers: { Authorization: `Bearer ${token}` },
                 }

@@ -44,7 +44,7 @@ const HomeworkSubmissionsModal = ({
       try {
         setLoading(true);
         const response = await axios.get(
-          `http://localhost:8000/homeworks/${homework.id}/submissions`,
+          `${process.env.NEXT_PUBLIC_API_URL}/homeworks/${homework.id}/submissions`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }

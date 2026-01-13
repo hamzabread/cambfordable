@@ -33,7 +33,7 @@ const SignupPage = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post("http://localhost:8000/auth/signup", formData);
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/auth/signup`, formData);
       setMessage(response.data.message);
       setTimeout(() => {
         router.push("/login");

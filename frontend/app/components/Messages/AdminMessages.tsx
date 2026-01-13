@@ -52,13 +52,13 @@ const AdminMessages = ({ user }: AdminMessagesProps) => {
         setLoading(true);
 
         // Fetch all courses
-        const coursesRes = await axios.get("http://localhost:8000/courses/", {
+        const coursesRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/courses/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
         // Fetch all live classes
         const classesRes = await axios.get(
-          "http://localhost:8000/live-classes/",
+          `${process.env.NEXT_PUBLIC_API_URL}/live-classes/`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -80,7 +80,7 @@ const AdminMessages = ({ user }: AdminMessagesProps) => {
             starts_at: new Date().toISOString(),
             ends_at: new Date(Date.now() + 3600000).toISOString(),
             meeting_id: "12345",
-            join_url: "http://localhost:8000/zoom/12345",
+            join_url: `${process.env.NEXT_PUBLIC_API_URL}/zoom/12345`,
           },
         ]);
       } finally {
@@ -102,7 +102,7 @@ const AdminMessages = ({ user }: AdminMessagesProps) => {
     const fetchChatHistory = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:8000/chat/${selectedClass}/messages`,
+          `${process.env.NEXT_PUBLIC_API_URL}/chat/${selectedClass}/messages`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setMessages(response.data);

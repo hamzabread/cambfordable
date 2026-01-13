@@ -22,7 +22,9 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "https://meramusafir.vercel.app",
         "http://127.0.0.1:8000",
-        "https://mera-musafir-web.vercel.app"
+        "https://mera-musafir-web.vercel.app",
+        "https://cambfordable-production.up.railway.app",
+
       
     ],
     allow_credentials=True,

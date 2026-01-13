@@ -54,14 +54,14 @@ const CoursesPage = () => {
         setLoading(true);
 
         // Fetch user
-        const userRes = await axios.get("http://localhost:8000/auth/me", {
+        const userRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser(userRes.data);
 
         // Fetch enrolled courses
         const enrolledRes = await axios.get(
-          "http://localhost:8000/courses/me",
+          `${process.env.NEXT_PUBLIC_API_URL}/courses/me`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -70,7 +70,7 @@ const CoursesPage = () => {
 
         // Fetch all courses
         const allCoursesRes = await axios.get(
-          "http://localhost:8000/courses/",
+          `${process.env.NEXT_PUBLIC_API_URL}/courses/`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -109,7 +109,7 @@ const CoursesPage = () => {
     try {
       setEnrollingId(courseId);
       await axios.post(
-        `http://localhost:8000/courses/${courseId}/enroll`,
+        `${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/enroll`,
         {},
         {
           headers: { Authorization: `Bearer ${token}` },

@@ -58,14 +58,14 @@ const LiveClassesPage = () => {
         setLoading(true);
 
         // Fetch user
-        const userRes = await axios.get("http://localhost:8000/auth/me", {
+        const userRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser(userRes.data);
 
         // Fetch enrolled courses
         const coursesRes = await axios.get(
-          "http://localhost:8000/courses/me",
+          `${process.env.NEXT_PUBLIC_API_URL}/courses/me`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -74,7 +74,7 @@ const LiveClassesPage = () => {
 
         // Fetch live classes
         const classesRes = await axios.get(
-          "http://localhost:8000/live-classes/me",
+          `${process.env.NEXT_PUBLIC_API_URL}/live-classes/me`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -143,7 +143,7 @@ const LiveClassesPage = () => {
 
       // Get credentials from your API
       const response = await axios.get(
-        `http://localhost:8000/live-classes/${classId}/zoom-sdk`,
+        `${process.env.NEXT_PUBLIC_API_URL}/live-classes/${classId}/zoom-sdk`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

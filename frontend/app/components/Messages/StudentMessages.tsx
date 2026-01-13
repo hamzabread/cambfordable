@@ -50,7 +50,7 @@ const StudentMessages = ({ user }: StudentMessagesProps) => {
       try {
         setLoading(true);
         const response = await axios.get(
-          "http://localhost:8000/live-classes/me",
+          `${process.env.NEXT_PUBLIC_API_URL}/live-classes/me`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -88,7 +88,7 @@ const StudentMessages = ({ user }: StudentMessagesProps) => {
     const fetchChatHistory = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:8000/chat/${selectedClass}/messages`,
+          `${process.env.NEXT_PUBLIC_API_URL}/chat/${selectedClass}/messages`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }

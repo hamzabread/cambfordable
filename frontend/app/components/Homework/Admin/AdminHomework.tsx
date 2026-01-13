@@ -53,7 +53,7 @@ const AdminHomework = ({ isAdmin }: AdminHomeworkProps) => {
         setLoading(true);
 
         // Fetch all courses
-        const coursesRes = await axios.get("http://localhost:8000/courses/", {
+        const coursesRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/courses/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCourses(coursesRes.data);
@@ -63,7 +63,7 @@ const AdminHomework = ({ isAdmin }: AdminHomeworkProps) => {
         for (const course of coursesRes.data) {
           try {
             const hwRes = await axios.get(
-              `http://localhost:8000/homeworks/course/${course.id}`,
+              `${process.env.NEXT_PUBLIC_API_URL}/homeworks/course/${course.id}`,
               {
                 headers: { Authorization: `Bearer ${token}` },
               }

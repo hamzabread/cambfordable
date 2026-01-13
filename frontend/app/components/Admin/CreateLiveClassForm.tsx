@@ -29,7 +29,7 @@ const CreateLiveClassForm = () => {
     const fetchCourses = async () => {
       try {
         const token = localStorage.getItem("access_token");
-        const response = await axios.get("http://localhost:8000/courses/", {
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/courses/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCourses(response.data);
@@ -88,7 +88,7 @@ const CreateLiveClassForm = () => {
       const token = localStorage.getItem("access_token");
 
       const response = await axios.post(
-        "http://localhost:8000/live-classes/",
+        `${process.env.NEXT_PUBLIC_API_URL}/live-classes/`,
         {
           course_id: Number(formData.course_id),
           title: formData.title,

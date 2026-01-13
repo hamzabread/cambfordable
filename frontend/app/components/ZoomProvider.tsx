@@ -23,7 +23,7 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
       }
 
       try {
-        const response = await axios.get("http://localhost:8000/auth/me", {
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser(response.data);
