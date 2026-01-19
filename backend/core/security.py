@@ -70,7 +70,7 @@ async def get_current_user_ws(websocket: WebSocket, db: Session) -> User:
     token = websocket.query_params.get("token")
     if not token:
         await websocket.close(code=1008)
-        raise HTTPException(status_code=401, detail="Missing token")
+        raise HTTPException(status_code=403, detail="Missing token")
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])

@@ -26,3 +26,13 @@ class HomeworkSubmissionOut(BaseModel):
     user_id: int
     file_url: str
     submitted_at: datetime
+    remark: Optional[str]
+    score: Optional[float]
+
+    class Config:
+        from_attributes = True
+
+class HomeworkGrade(BaseModel):
+    submission_id: int
+    score: Optional[float] = None
+    remark: Optional[str] = None

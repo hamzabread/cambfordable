@@ -44,7 +44,6 @@ const LiveClassesPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [filterCourse, setFilterCourse] = useState<number | null>(null);
-  const [activeMeeting, setActiveMeeting] = useState<any>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -134,27 +133,7 @@ const LiveClassesPage = () => {
   }, [router]);
 
   const handleJoinClass = async (classId: number) => {
-    const token = localStorage.getItem("access_token");
-    if (!token) return router.push("/login");
-
-    try {
-      setJoiningId(classId);
-      setError(null);
-
-      // Get credentials from your API
-      const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/live-classes/${classId}/zoom-sdk`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      // Set active meeting - This triggers the ZoomProvider to mount
-      setActiveMeeting(response.data);
-    } catch (err: any) {
-      console.error("Zoom Join Error:", err);
-      setError(err.message || "Failed to join class");
-    } finally {
-      setJoiningId(null);
-    }
+    window.open(`/meeting/${classId}`, "_blank");
   };
 
   const formatDate = (dateString: string) => {
@@ -237,22 +216,7 @@ const LiveClassesPage = () => {
         />
 
         {/* ZOOM OVERLAY - Renders only when activeMeeting exists */}
-        {activeMeeting && (
-          <div className="fixed inset-0 z-[60] bg-black flex flex-col">
-            <div className="bg-slate-900 p-4 flex justify-between items-center text-white">
-              <span className="font-bold">Live Classroom: {activeMeeting.meeting_id}</span>
-              <button 
-                onClick={() => setActiveMeeting(null)}
-                className="p-2 hover:bg-slate-700 rounded-full transition"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="flex-1 bg-black">
-              <ZoomProvider meetingData={activeMeeting} />
-            </div>
-          </div>
-        )}
+        
 
         <main className="flex-1 overflow-auto">
           <div className="p-4 sm:p-6 lg:p-8 space-y-8">

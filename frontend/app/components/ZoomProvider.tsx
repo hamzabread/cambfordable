@@ -9,7 +9,7 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  
+
   const meetingSDKElement = useRef<HTMLDivElement>(null);
   const clientRef = useRef<any>(null);
 
@@ -23,9 +23,12 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
       }
 
       try {
-        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/auth/me`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         setUser(response.data);
       } catch (err) {
         localStorage.removeItem("access_token");
@@ -43,13 +46,21 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
 
   useEffect(() => {
     // Only proceed if we have user data, meeting data, and no lock
-    if (loading || !user || !meetingData?.signature || !meetingSDKElement.current || zoomGlobalLock) return;
+    if (
+      loading ||
+      !user ||
+      !meetingData?.signature ||
+      !meetingSDKElement.current ||
+      zoomGlobalLock
+    )
+      return;
 
     const setupZoom = async () => {
       try {
         zoomGlobalLock = true;
         const ZoomEmbedMod = await import("@zoom/meetingsdk/embedded");
-        const ZoomMtgEmbedded = ZoomEmbedMod.ZoomMtgEmbedded || ZoomEmbedMod.default || ZoomEmbedMod;
+        const ZoomMtgEmbedded =
+          ZoomEmbedMod.ZoomMtgEmbedded || ZoomEmbedMod.default || ZoomEmbedMod;
 
         if (!clientRef.current) {
           clientRef.current = ZoomMtgEmbedded.createClient();
@@ -68,7 +79,9 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
           leaveUrl: `${window.location.origin}/courses`,
           appKey: sKey,
           customize: {
-            meeting_info: isAdmin ? ["topic", "host", "participant_number"] : [],
+            meeting_info: isAdmin
+              ? ["topic", "host", "participant_number"]
+              : [],
             toolbar: {
               buttons: [
                 { name: "participants", visible: isAdmin },
@@ -79,8 +92,13 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
             },
             video: {
               isUserDecode: true,
-              viewSizes: { default: { width: window.innerWidth, height: window.innerHeight } },
-              isSpeakerView: true, 
+              viewSizes: {
+                default: {
+                  width: window.innerWidth,
+                  height: window.innerHeight,
+                },
+              },
+              isSpeakerView: true,
             },
           },
         });
@@ -99,10 +117,11 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
         client.on("connection-change", (payload: any) => {
           if (payload.state === "Closed" || payload.state === "Terminated") {
             zoomGlobalLock = false;
-            window.location.href = "/courses";
+            // Instead of redirecting the current tab, we close it
+            window.close();
+            // Note: window.close() only works if the tab was opened via window.open()
           }
         });
-
       } catch (error: any) {
         console.error("Zoom Error:", error);
         if (error.type !== "ALREADY_JOINED") zoomGlobalLock = false;
@@ -110,7 +129,9 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
     };
 
     setupZoom();
-    return () => { zoomGlobalLock = false; };
+    return () => {
+      zoomGlobalLock = false;
+    };
   }, [meetingData, isAdmin, loading, user]);
 
   const enterFullScreen = () => {
@@ -118,11 +139,18 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
     if (elem.requestFullscreen) elem.requestFullscreen();
   };
 
-  if (loading) return <div className="bg-black h-screen w-screen flex items-center justify-center text-white">Loading Class...</div>;
+  if (loading)
+    return (
+      <div className="bg-black h-screen w-screen flex items-center justify-center text-white">
+        Loading Class...
+      </div>
+    );
 
   return (
     <div className="fixed inset-0 z-50 bg-black w-screen h-screen overflow-hidden">
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
           #zmmtg-root { 
             pointer-events: auto !important; 
           }
@@ -133,7 +161,9 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
             pointer-events: auto !important; 
           }
           
-          ${!isAdmin ? `
+          ${
+            !isAdmin
+              ? `
             /* ===== STUDENT VIEW: HIDE ALL PARTICIPANT INFO ===== */
             
             /* Hide participant count badge */
@@ -213,7 +243,8 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
               object-fit: contain !important;
             }
 
-          ` : `
+          `
+              : `
             /* ===== ADMIN/TEACHER VIEW: SHOW ALL CONTROLS ===== */
             
             #zmmtg-root .sidebar-container,
@@ -233,7 +264,8 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
               display: block !important;
               visibility: visible !important;
             }
-          `}
+          `
+          }
 
           /* Universal fixes for both views */
           #zmmtg-root button {
@@ -250,23 +282,26 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
           #zmmtg-root .footer-button__leave {
             pointer-events: auto !important;
           }
-        `}} />
+        `,
+        }}
+      />
 
       <div className="absolute top-4 right-4 z-[100] flex items-center gap-3">
-        <button 
-            onClick={enterFullScreen} 
-            className="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-full backdrop-blur-md border border-white/20"
+        <button
+          onClick={enterFullScreen}
+          className="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-full backdrop-blur-md border border-white/20"
         >
           ⛶
         </button>
         <button
           onClick={async () => {
             if (clientRef.current) {
-              try { 
+              try {
                 // Using 'isAdmin' here from auth/me ensures the correct termination logic
-                await clientRef.current.leaveMeeting(isAdmin); 
-              } 
-              catch (e) { window.location.href = "/courses"; }
+                await clientRef.current.leaveMeeting(isAdmin);
+              } catch (e) {
+                window.location.href = "/courses";
+              }
             }
           }}
           className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-full font-bold shadow-2xl"

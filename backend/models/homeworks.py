@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Column, Float, Integer, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from database import Base
 from datetime import datetime, timezone
@@ -24,6 +24,9 @@ class HomeworkSubmission(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     file_url = Column(String, nullable=False)  # Link to uploaded file
     submitted_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    remark = Column(String, nullable=True) # <--- Add this
+    score = Column(Float, nullable=True)
 
     homework = relationship("Homework", back_populates="submissions")
     user = relationship("User")
+

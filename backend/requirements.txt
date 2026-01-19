@@ -20,3 +20,4 @@ websocket
 pydantic-settings
 requests
 PyJWT
+uvicorn[standard]

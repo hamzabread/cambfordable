@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+
 from routers.auth import router as auth_router
 from routers.users import router as users_router
 from routers.courses import router as courses_router
@@ -7,8 +8,13 @@ from routers.homework import router as homework_router
 from routers.websocket import router as websocket_router
 from routers.payments import router as payments_router
 from routers.admin_courses import router as admin_courses_router
+from routers.quiz_submissions import router as quiz_submissions_router
+from routers.quizzes import router as quizzes_router
+from routers.uploads import router as uploads_router
 from database import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 
 app = FastAPI()
 
@@ -33,8 +39,13 @@ app.add_middleware(
     allow_headers=["*"],              # Allow all headers
 )
 
+UPLOAD_DIR = "uploads/quiz_answers"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 
 Base.metadata.create_all(bind=engine)
+
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.include_router(auth_router)
 app.include_router(users_router)
@@ -44,6 +55,10 @@ app.include_router(homework_router)
 app.include_router(websocket_router)
 app.include_router(payments_router)
 app.include_router(admin_courses_router)
+app.include_router(quiz_submissions_router)
+app.include_router(quizzes_router)
+app.include_router(uploads_router)
+
 
 @app.get("/")
 async def read_root():

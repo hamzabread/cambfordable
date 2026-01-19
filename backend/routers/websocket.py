@@ -77,12 +77,15 @@ async def live_class_chat(
         ).first()
 
         if not enrollment:
+            print(f"User {user.id} denied: No enrollment for class {live_class_id}")
             await websocket.close(code=1008)
             return
 
         # Students can only join when class is live
         now = datetime.now(timezone.utc)
         if not (live_class.starts_at <= now <= live_class.ends_at):
+            print("DEBUG: Class is not live!")
+            print(f"User {user.id} denied: Class {live_class_id} is not live")
             await websocket.close(code=1008)
             return
 
