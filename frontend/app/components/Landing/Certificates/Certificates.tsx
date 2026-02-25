@@ -13,7 +13,7 @@ export default function BiographySection() {
   ];
 
   const interests = [
-    "Electrical Engineering",
+    "Electrical Engineering EE",
     "Computer Science",
     "Artificial Intelligence",
     "Applied Industry Solutions",
