@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useRouter } from "next/navigation";
 import { Video, AlertCircle, CheckCircle, Loader } from "lucide-react";
 
 interface Course {
@@ -11,6 +12,7 @@ interface Course {
 }
 
 const CreateLiveClassForm = () => {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     course_id: "",
     title: "",
@@ -105,7 +107,7 @@ const CreateLiveClassForm = () => {
         "Course";
 
       setSuccess(
-        `Live class "${formData.title}" created for ${courseName}!`
+        `Live class "${formData.title}" created! Joining the meeting...`
       );
 
       // Reset form
@@ -116,7 +118,10 @@ const CreateLiveClassForm = () => {
         duration: "60",
       });
 
-      setTimeout(() => setSuccess(null), 3000);
+      // Auto-join the meeting after 1 second
+      setTimeout(() => {
+        router.push(`/meeting/${response.data.id}`);
+      }, 1000);
     } catch (err: any) {
       console.error("Error creating live class:", err);
       if (err.response?.data?.detail) {

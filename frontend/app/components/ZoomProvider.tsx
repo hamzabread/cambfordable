@@ -97,8 +97,14 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
                   width: window.innerWidth,
                   height: window.innerHeight,
                 },
+                screenShare: {
+                  width: window.innerWidth,
+                  height: window.innerHeight,
+                },
               },
               isSpeakerView: true,
+              isResizable: false,
+              viewType: "gallery",
             },
           },
         });
@@ -153,12 +159,39 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
           __html: `
           #zmmtg-root { 
             pointer-events: auto !important; 
+            width: 100% !important;
+            height: 100% !important;
           }
 
           #zmmtg-root .meeting-footer { 
             display: flex !important; 
             visibility: visible !important; 
             pointer-events: auto !important; 
+          }
+
+          /* Ensure screenshare and video containers take full screen */
+          #zmmtg-root .share-view-container,
+          #zmmtg-root .share-view,
+          #zmmtg-root .screen-share-container,
+          #zmmtg-root .screen-shared-container,
+          #zmmtg-root .video-container,
+          #zmmtg-root .meeting-container,
+          #zmmtg-root [class*="share-view"],
+          #zmmtg-root [class*="screen"] {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            object-fit: contain !important;
+          }
+
+          /* Ensure main video/content area is full screen */
+          #zmmtg-root .video-js,
+          #zmmtg-root .zm-video-container,
+          #zmmtg-root video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain !important;
           }
           
           ${

@@ -6,12 +6,14 @@ def create_live_chat_message(
     *,
     live_class_id: int,
     user_id: int,
-    message: str
+    message: str,
+    is_admin=False
 ):
     msg = LiveClassMessage(
         live_class_id=live_class_id,
         user_id=user_id,
-        message=message
+        message=message,
+        is_admin=is_admin,
     )
     db.add(msg)
     db.commit()

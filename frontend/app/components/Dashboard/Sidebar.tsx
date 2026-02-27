@@ -57,7 +57,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
         {/* Logo */}
         <div className="p-6 border-b border-slate-700">
           <Link href="/">
-          <h1 className="text-2xl font-bold">Cambridge</h1>
+          <h1 className="text-2xl font-bold">Cambfordable</h1>
           </Link>
         </div>
 

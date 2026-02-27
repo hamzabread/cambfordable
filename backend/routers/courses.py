@@ -46,8 +46,14 @@ def list_courses(db: Session = Depends(get_db)):
 def admin_create_course(
     course_in: CourseOut,
     db: Session = Depends(get_db),
-    admin_user = Depends(get_current_admin)
+    admin_user: User = Depends(get_current_admin)
 ):
-    return create_course(db, course_in )
+    # Create the course
+    course = create_course(db, course_in)
+    
+    # Auto-enroll the admin in the course
+    create_enrollment(db, admin_user, course.id)
+    
+    return course
 
 

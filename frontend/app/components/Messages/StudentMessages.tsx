@@ -9,6 +9,7 @@ interface Message {
   message: string;
   created_at: string;
   user_id: number;
+  is_admin: boolean;
 }
 
 interface LiveClass {
@@ -151,42 +152,23 @@ const StudentMessages = ({ user }: StudentMessagesProps) => {
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!messageText.trim() || !ws || ws.readyState !== WebSocket.OPEN) {
-      setError("Message could not be sent");
-      return;
-    }
-
-    const messageContent = messageText;
-
-    try {
-      setSending(true);
-      
-      // Add message optimistically (show immediately)
-      const optimisticMessage: Message = {
-        id: Date.now(), // temporary ID
-        message: messageContent,
-        created_at: new Date().toISOString(),
-        user_id: user.id,
-      };
-      
-      setMessages((prev) => [...prev, optimisticMessage]);
-      scrollToBottom();
-      
-      // Send via WebSocket
-      ws.send(messageContent);
-      setMessageText("");
-      setError(null);
-    } catch (err) {
-      console.error("Error sending message:", err);
-      setError("Failed to send message");
-      // Remove optimistic message if send failed
-      setMessages((prev) => prev.filter((m) => m.message !== messageContent));
-    } finally {
-      setSending(false);
-    }
-  };
+  e.preventDefault();
+  if (!messageText.trim() || !ws || ws.readyState !== WebSocket.OPEN) {
+    setError("Message could not be sent");
+    return;
+  }
+  try {
+    setSending(true);
+    ws.send(messageText);  // server will echo it back to sender only
+    setMessageText("");
+    setError(null);
+  } catch (err) {
+    console.error("Error sending message:", err);
+    setError("Failed to send message");
+  } finally {
+    setSending(false);
+  }
+};
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -252,7 +234,7 @@ const StudentMessages = ({ user }: StudentMessagesProps) => {
                 <div key={idx} className="flex flex-col gap-1">
                   <div className="flex items-baseline gap-2">
                     <span className="font-semibold text-slate-900 text-sm">
-                      {msg.user_id === user.id ? "You" : `Teacher`}
+                      {msg.user_id === user.id ? "You" : msg.is_admin ? "Teacher" : "Student"}
                     </span>
                     <span className="text-xs text-slate-500">
                       {formatTime(msg.created_at)}

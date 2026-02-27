@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, Text, DateTime
+from sqlalchemy import Column, Boolean, Integer, ForeignKey, Text, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from database import Base
@@ -11,6 +11,6 @@ class LiveClassMessage(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     message = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
-
+    is_admin = Column(Boolean, default=False)
     user = relationship("User")
     live_class = relationship("LiveClass")

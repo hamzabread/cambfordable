@@ -21,32 +21,28 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:8081",      # Expo web dev server
-        "http://localhost:3000",      # React dev server
-        "http://localhost:5173",      # Vite dev server
-        "http://127.0.0.1:8081",      # Alternative localhost
+        "http://localhost:8081",
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:8081",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
         "https://meramusafir.vercel.app",
         "http://127.0.0.1:8000",
         "https://mera-musafir-web.vercel.app",
         "https://cambfordable-production.up.railway.app",
-
-      
     ],
     allow_credentials=True,
-    allow_methods=["*"],              # Allow all HTTP methods
-    allow_headers=["*"],              # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 UPLOAD_DIR = "uploads/quiz_answers"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-
 Base.metadata.create_all(bind=engine)
 
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
-
+# IMPORTANT: Include all routers BEFORE mounting static files
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(courses_router)
@@ -57,7 +53,10 @@ app.include_router(payments_router)
 app.include_router(admin_courses_router)
 app.include_router(quiz_submissions_router)
 app.include_router(quizzes_router)
-app.include_router(uploads_router)
+app.include_router(uploads_router)  # This MUST come before the static mount
+
+# Mount static files LAST - this catches any remaining /uploads/* GET requests
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 @app.get("/")

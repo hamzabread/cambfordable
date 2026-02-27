@@ -34,11 +34,17 @@ async def redis_listener(live_class_id: int):
 
             payload = json.loads(message["data"])
 
+            # Broadcast to all connected users, but each client decides what to show
             for conn in active_connections.get(live_class_id, []):
-                if payload["is_admin"]:
+                # Admins see everything
+                if conn["is_admin"]:
                     await conn["ws"].send_json(payload)
-                elif conn["is_admin"]:
+                # Students only see:
+                # 1. Messages from admins (payload["is_admin"] == True)
+                # 2. Their own messages (payload["user_id"] == conn["user_id"])
+                elif payload["is_admin"] or payload["user_id"] == conn["user_id"]:
                     await conn["ws"].send_json(payload)
+                # Otherwise, don't send the message to this student
 
     finally:
         await pubsub.unsubscribe(chat_channel(live_class_id))
@@ -69,8 +75,8 @@ async def live_class_chat(
         return
 
     # ✅ Authorization rules
+    # ✅ Authorization rules
     if not user.is_admin:
-        # Students must be enrolled
         enrollment = db.query(Enrollment).filter(
             Enrollment.user_id == user.id,
             Enrollment.course_id == live_class.course_id
@@ -81,15 +87,13 @@ async def live_class_chat(
             await websocket.close(code=1008)
             return
 
-        # Students can only join when class is live
         now = datetime.now(timezone.utc)
         if not (live_class.starts_at <= now <= live_class.ends_at):
-            print("DEBUG: Class is not live!")
             print(f"User {user.id} denied: Class {live_class_id} is not live")
             await websocket.close(code=1008)
             return
 
-        # ✅ Register connection
+    # ✅ Register connection — OUTSIDE the if not user.is_admin block
     if live_class_id not in active_connections:
         active_connections[live_class_id] = []
         redis_tasks[live_class_id] = asyncio.create_task(
@@ -119,7 +123,8 @@ async def live_class_chat(
                 db,
                 live_class_id=live_class_id,
                 user_id=user.id,
-                message=data
+                message=data,
+                is_admin=user.is_admin
             )
 
             payload = {
@@ -152,14 +157,14 @@ async def live_class_chat(
 
 
 # routers/chat.py
-@router.get(
-    "/{live_class_id}/messages",
-    response_model=list[LiveChatMessageOut]
-)
+@router.get("/{live_class_id}/messages", response_model=list[LiveChatMessageOut])
 def get_chat_history(
     live_class_id: int,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    # Optional: reuse same enrollment checks
-    return get_live_chat_messages(db, live_class_id)
+    messages = get_live_chat_messages(db, live_class_id)
+    if user.is_admin:
+        return messages
+    # Students only see admin messages and their own
+    return [m for m in messages if m.user_id == user.id or m.is_admin]
