@@ -19,6 +19,7 @@ interface Homework {
   title: string;
   description: string;
   due_date: string;
+  course_name?: string;
 }
 
 interface Course {
@@ -29,9 +30,10 @@ interface Course {
 
 interface AdminHomeworkProps {
   isAdmin: boolean;
+  isTAMode?: boolean;
 }
 
-const AdminHomework = ({ isAdmin }: AdminHomeworkProps) => {
+const AdminHomework = ({ isAdmin, isTAMode = false }: AdminHomeworkProps) => {
   const [homeworks, setHomeworks] = useState<Homework[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,8 +44,6 @@ const AdminHomework = ({ isAdmin }: AdminHomeworkProps) => {
   );
   const [showSubmissions, setShowSubmissions] = useState(false);
 
-  if (!isAdmin) return null;
-
   useEffect(() => {
     const fetchData = async () => {
       const token = localStorage.getItem("access_token");
@@ -52,8 +52,12 @@ const AdminHomework = ({ isAdmin }: AdminHomeworkProps) => {
       try {
         setLoading(true);
 
-        // Fetch all courses
-        const coursesRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/courses/`, {
+        // Fetch courses - use /courses/me for TAs, /courses for admins
+        const coursesUrl = isTAMode 
+          ? `${process.env.NEXT_PUBLIC_API_URL}/courses/me`
+          : `${process.env.NEXT_PUBLIC_API_URL}/courses/`;
+        
+        const coursesRes = await axios.get(coursesUrl, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCourses(coursesRes.data);
@@ -68,7 +72,12 @@ const AdminHomework = ({ isAdmin }: AdminHomeworkProps) => {
                 headers: { Authorization: `Bearer ${token}` },
               }
             );
-            allHomeworks.push(...hwRes.data);
+            // Add course_name to each homework
+            const homeworksWithCourse = hwRes.data.map((hw: any) => ({
+              ...hw,
+              course_name: course.name,
+            }));
+            allHomeworks.push(...homeworksWithCourse);
           } catch (err: any) {
             // Skip courses without homeworks
             if (err.response?.status !== 404) {
@@ -143,19 +152,21 @@ const AdminHomework = ({ isAdmin }: AdminHomeworkProps) => {
           <div className="flex items-center gap-3">
             <BookOpen className="w-8 h-8 text-orange-600" />
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">
-              Manage Homework
+              {isTAMode ? "Grade Homework" : "Manage Homework"}
             </h2>
           </div>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="px-4 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            Create Homework
-          </button>
+          {isAdmin && !isTAMode && (
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="px-4 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Create Homework
+            </button>
+          )}
         </div>
         <p className="text-slate-600">
-          Create and manage homework assignments for your courses
+          {isTAMode ? "Grade homework submissions for your courses" : "Create and manage homework assignments for your courses"}
         </p>
       </div>
 
@@ -168,7 +179,7 @@ const AdminHomework = ({ isAdmin }: AdminHomeworkProps) => {
       )}
 
       {/* Create Form */}
-      {showForm && (
+      {showForm && isAdmin && !isTAMode && (
         <CreateHomeworkForm
           courses={courses}
           onSuccess={handleCreateSuccess}
@@ -183,54 +194,80 @@ const AdminHomework = ({ isAdmin }: AdminHomeworkProps) => {
           <p className="text-slate-600">Loading homeworks...</p>
         </div>
       ) : homeworks.length > 0 ? (
-        <div className="space-y-4">
-          {homeworks.map((homework) => (
-            <div
-              key={homework.id}
-              className={`bg-white rounded-lg shadow-sm border-l-4 p-6 hover:shadow-md transition ${
-                isOverdue(homework.due_date)
-                  ? "border-l-red-500"
-                  : "border-l-blue-500"
-              }`}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                {/* Left Section */}
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-slate-900">
-                    {homework.title}
-                  </h3>
-                  <p className="text-sm text-slate-600 mt-1">
-                    {getCourseName(homework.course_id)}
-                  </p>
-                  <p className="text-slate-700 text-sm mt-2">
-                    {homework.description}
-                  </p>
-                  <div className="flex flex-wrap gap-4 mt-3">
-                    <span className="text-xs text-slate-500">
-                      Due: {formatDate(homework.due_date)}
-                    </span>
-                    {isOverdue(homework.due_date) && (
-                      <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-semibold">
-                        Overdue
-                      </span>
-                    )}
-                  </div>
-                </div>
+        <div className="space-y-8">
+          {(() => {
+            // Group homeworks by course
+            const courseMap = new Map<number, { name: string; homeworks: Homework[] }>();
+            homeworks.forEach((hw) => {
+              const courseName = hw.course_name || "Unknown Course";
+              if (!courseMap.has(hw.course_id)) {
+                courseMap.set(hw.course_id, {
+                  name: courseName,
+                  homeworks: [],
+                });
+              }
+              courseMap.get(hw.course_id)!.homeworks.push(hw);
+            });
 
-                {/* Right Section - View Button */}
-                <button
-                  onClick={() => {
-                    setSelectedHomework(homework);
-                    setShowSubmissions(true);
-                  }}
-                  className="px-4 py-2 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition flex items-center gap-2 whitespace-nowrap"
-                >
-                  <Eye className="w-4 h-4" />
-                  View Submissions
-                </button>
+            // Convert to sorted array
+            const courses = Array.from(courseMap.entries())
+              .map(([, value]) => value)
+              .sort((a, b) => a.name.localeCompare(b.name));
+
+            return courses.map((course) => (
+              <div key={course.name}>
+                <h3 className="text-xl font-bold text-slate-900 mb-4">
+                  {course.name}
+                </h3>
+                <div className="space-y-4">
+                  {course.homeworks.map((homework) => (
+                    <div
+                      key={homework.id}
+                      className={`bg-white rounded-lg shadow-sm border-l-4 p-6 hover:shadow-md transition ${
+                        isOverdue(homework.due_date)
+                          ? "border-l-red-500"
+                          : "border-l-blue-500"
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        {/* Left Section */}
+                        <div className="flex-1">
+                          <h4 className="text-lg font-bold text-slate-900">
+                            {homework.title}
+                          </h4>
+                          <p className="text-slate-700 text-sm mt-2">
+                            {homework.description}
+                          </p>
+                          <div className="flex flex-wrap gap-4 mt-3">
+                            <span className="text-xs text-slate-500">
+                              Due: {formatDate(homework.due_date)}
+                            </span>
+                            {isOverdue(homework.due_date) && (
+                              <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-semibold">
+                                Overdue
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Right Section - View Button */}
+                        <button
+                          onClick={() => {
+                            setSelectedHomework(homework);
+                            setShowSubmissions(true);
+                          }}
+                          className="px-4 py-2 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition flex items-center gap-2 whitespace-nowrap"
+                        >
+                          <Eye className="w-4 h-4" />
+                          View Submissions
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ));
+          })()}
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-12 text-center">

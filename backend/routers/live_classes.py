@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 from database import get_db
@@ -10,6 +10,7 @@ from core.security import get_current_admin
 from models.live_classes import LiveClass
 from core.zoom_sdk import generate_zoom_sdk_signature
 from core.zoom_config import zoom_settings
+from routers.uploads import LIVE_CLASSES_UPLOAD_DIR, save_file
 
 router = APIRouter(prefix="/live-classes", tags=["Live Classes"])
 
@@ -81,4 +82,29 @@ def list_live_classes(
     current_user: User = Depends(get_current_admin),
 ):
     return db.query(LiveClass).all()
+
+
+@router.post("/{class_id}/attachment")
+def upload_class_attachment(
+    class_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin),
+):
+    """Admin uploads an attachment to a past class"""
+    # Verify the class exists
+    live_class = db.query(LiveClass).filter(LiveClass.id == class_id).first()
+    if not live_class:
+        raise HTTPException(status_code=404, detail="Class not found")
+    
+    # Save the file
+    file_path = save_file(file, LIVE_CLASSES_UPLOAD_DIR)
+    db_path = f"/{file_path}"
+    
+    # Update the class with the attachment URL
+    live_class.attachment_url = db_path
+    db.commit()
+    db.refresh(live_class)
+    
+    return {"attachment_url": db_path, "original_filename": file.filename}
 

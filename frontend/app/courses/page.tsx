@@ -252,34 +252,10 @@ const CoursesPage = () => {
                         </div>
                       </div>
 
-                      {/* Progress Section */}
-                      <div className="space-y-3">
-                        <div>
-                          <div className="flex justify-between mb-2">
-                            <p className="text-sm text-slate-600">Progress</p>
-                            <p className="text-sm font-semibold text-slate-900">
-                              {course.progress}%
-                            </p>
-                          </div>
-                          <div className="w-full bg-slate-200 rounded-full h-2">
-                            <div
-                              className="bg-slate-900 h-2 rounded-full transition-all"
-                              style={{ width: `${course.progress}%` }}
-                            ></div>
-                          </div>
-                        </div>
-
-                        {course.completed > 0 && (
-                          <p className="text-xs text-slate-500">
-                            {course.completed} lessons completed
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Action Button */}
-                      <button className="w-full mt-6 px-4 py-2.5 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition">
-                        Continue Learning
-                      </button>
+                      {/* Course Details */}
+                      <p className="text-sm text-slate-600 mt-2">
+                        Expand your knowledge in {course.name}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -326,15 +302,6 @@ const CoursesPage = () => {
 
                       {/* Course Info */}
                       <div className="space-y-3 mb-6">
-                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                          <span className="text-sm text-slate-600">
-                            Students Enrolled
-                          </span>
-                          <span className="font-semibold text-slate-900">
-                            {Math.floor(Math.random() * 150) + 50}
-                          </span>
-                        </div>
-
                         <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
                           <span className="text-sm text-slate-600">
                             Difficulty

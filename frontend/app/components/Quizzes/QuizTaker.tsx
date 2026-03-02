@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { AlertCircle, CheckCircle, Send, Upload, X, FileText, Shield, Eye, AlertTriangle, Maximize } from "lucide-react";
+import { AlertCircle, CheckCircle, Send, Upload, X, FileText, Shield, Eye, AlertTriangle, Maximize, ImageIcon, Download } from "lucide-react";
 
 interface Option {
   id: number;
@@ -14,6 +14,7 @@ interface Question {
   is_mcq: boolean;
   marks: number;
   options: Option[];
+  image_url?: string | null;
 }
 
 interface QuizData {
@@ -51,6 +52,7 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
 
   const [answers, setAnswers] = useState<{ [key: number]: any }>({});
   const [fileNames, setFileNames] = useState<{ [key: number]: string }>({});
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
   
   const autoSubmitTimerRef = useRef<NodeJS.Timeout | null>(null);
   const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -591,6 +593,34 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
               </div>
             </div>
 
+            {/* Question Image */}
+            {question.image_url && (
+              <div className="mt-4 bg-white rounded-lg border border-slate-300 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-300">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <ImageIcon className="w-4 h-4" />
+                    Question Visual
+                  </div>
+                  <a
+                    href={`${process.env.NEXT_PUBLIC_API_URL}${question.image_url}`}
+                    download
+                    className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 text-xs font-medium"
+                  >
+                    <Download className="w-3 h-3" />
+                    Download
+                  </a>
+                </div>
+                <div className="p-4 flex justify-center bg-white min-h-[100px]">
+                  <img
+                    src={`${process.env.NEXT_PUBLIC_API_URL}${question.image_url}`}
+                    alt="Question visual"
+                    className="max-w-full h-auto max-h-[500px] object-contain rounded cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setViewingImage(`${process.env.NEXT_PUBLIC_API_URL}${question.image_url}`)}
+                  />
+                </div>
+              </div>
+            )}
+
             {question.is_mcq ? (
               <div className="space-y-2 mt-4">
                 <p className="text-sm font-semibold text-slate-600">
@@ -718,6 +748,57 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
           )}
         </button>
       </div>
+
+      {/* Image Viewer Modal */}
+      {viewingImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-70 z-[10000] flex items-center justify-center p-4"
+          onClick={() => setViewingImage(null)}
+        >
+          <div
+            className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+              <h2 className="text-lg font-semibold text-slate-900">Question Image</h2>
+              <button
+                onClick={() => setViewingImage(null)}
+                className="text-slate-500 hover:text-slate-700 transition"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Image */}
+            <div className="flex-1 overflow-auto flex items-center justify-center p-4 bg-slate-50">
+              <img
+                src={viewingImage}
+                alt="Question visual"
+                className="max-w-full max-h-full object-contain"
+              />
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-200 flex gap-3">
+              <a
+                href={viewingImage}
+                download
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </a>
+              <button
+                onClick={() => setViewingImage(null)}
+                className="flex-1 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-900 font-medium rounded-lg transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

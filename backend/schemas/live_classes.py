@@ -37,6 +37,7 @@ class LiveClassOut(BaseModel):
     meeting_id: str
     join_url: str
     start_url: str
+    attachment_url: str | None = None
 
     class Config:
         from_attributes = True

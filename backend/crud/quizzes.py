@@ -39,7 +39,27 @@ def create_quiz(db: Session, quiz_in: QuizCreate):
                 db.add(option)
 
     db.commit()
-    return {"quiz_id": quiz.id, "message": "Quiz created"}
+    
+    # Return full quiz with question IDs for frontend image uploads
+    return {
+        "id": quiz.id,
+        "quiz_id": quiz.id,
+        "title": quiz.title,
+        "course_id": quiz.course_id,
+        "total_marks": quiz.total_marks,
+        "deadline": quiz.deadline,
+        "allow_late": quiz.allow_late,
+        "questions": [
+            {
+                "id": q.id,
+                "question_text": q.question_text,
+                "is_mcq": q.is_mcq,
+                "marks": q.marks,
+            }
+            for q in db.query(QuizQuestion).filter(QuizQuestion.quiz_id == quiz.id).all()
+        ],
+        "message": "Quiz created"
+    }
 
 
 # ✅ THIS IS THE MISSING FUNCTION YOU NEED
@@ -82,6 +102,7 @@ def get_quiz_for_student(db: Session, quiz_id: int):
             "question_text": q.question_text,
             "is_mcq": q.is_mcq,
             "marks": q.marks,
+            "image_url": q.image_url,
         }
 
         if q.is_mcq:

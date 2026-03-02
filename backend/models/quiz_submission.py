@@ -1,5 +1,5 @@
 # models/quiz_submission.py
-from sqlalchemy import Column, Integer, ForeignKey, Boolean, TIMESTAMP
+from sqlalchemy import Column, Integer, ForeignKey, Boolean, TIMESTAMP, String
 from sqlalchemy.orm import relationship
 from database import Base
 from datetime import datetime
@@ -11,6 +11,7 @@ class QuizSubmission(Base):
     quiz_id = Column(Integer, ForeignKey("quizzes.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     score = Column(Integer, nullable=True)
+    remarks = Column(String, nullable=True)  # Teacher feedback/remarks
     submitted_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
     is_late = Column(Boolean, default=False)
     tab_switches = Column(Integer, default=0)

@@ -65,6 +65,14 @@ def get_current_admin(current_user: User = Depends(get_current_user)):
         )
     return current_user
 
+def get_current_admin_or_ta(current_user: User = Depends(get_current_user)):
+    if not current_user.is_admin and not current_user.is_ta:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin or TA privileges required"
+        )
+    return current_user
+
 
 async def get_current_user_ws(websocket: WebSocket, db: Session) -> User:
     token = websocket.query_params.get("token")

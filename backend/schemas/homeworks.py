@@ -6,6 +6,7 @@ class HomeworkBase(BaseModel):
     course_id: int
     title: str
     description: Optional[str] = None
+    image_url: Optional[str] = None
     due_date: datetime
 
     class Config:

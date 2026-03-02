@@ -1,12 +1,12 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
-from models.homeworks import HomeworkSubmission
-from routers.uploads import HOMEWORK_UPLOAD_DIR, save_file
+from models.homeworks import HomeworkSubmission, Homework
+from routers.uploads import HOMEWORK_UPLOAD_DIR, HOMEWORK_IMAGES_DIR, save_file
 from database import get_db
 from crud.homeworks import create_homework, get_course_homeworks, grade_homework_submission, submit_homework, get_user_homework_submissions, get_homework_submissions
 from schemas.homeworks import HomeworkCreate, HomeworkGrade, HomeworkOut, HomeworkSubmissionCreate, HomeworkSubmissionOut
-from core.security import get_current_admin, get_current_user
+from core.security import get_current_admin, get_current_admin_or_ta, get_current_user
 from models.users import User
 
 router = APIRouter(prefix="/homeworks", tags=["Homeworks"])
@@ -21,29 +21,6 @@ def admin_create_homework(homework_in: HomeworkCreate, db: Session = Depends(get
 def list_course_homework(course_id: int, db: Session = Depends(get_db)):
     return get_course_homeworks(db, course_id)
 
-# Submit homework (upload file)
-@router.post("/{homework_id}/submit")
-async def submit_homework_endpoint(
-    homework_id: int,
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    # 1. Save the file using the helper into the homeworks directory
-    file_path = save_file(file, HOMEWORK_UPLOAD_DIR)
-    
-    # 2. Add a leading slash so the frontend sees it as a root-relative path
-    # Result: "/uploads/homeworks/filename_uuid.ext"
-    db_path = f"/{file_path}"
-    
-    # 3. Create the submission record in the database
-    submission_data = HomeworkSubmissionCreate(file_url=db_path)
-    return submit_homework(
-        db=db, 
-        homework_id=homework_id, 
-        user_id=current_user.id, 
-        submission_in=submission_data
-    )
 # List current user's submissions
 @router.get("/me", response_model=list[HomeworkSubmissionOut])
 def my_submissions(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -55,7 +32,7 @@ def my_submissions(db: Session = Depends(get_db), current_user: User = Depends(g
 def list_homework_submissions(
     homework_id: int,
     db: Session = Depends(get_db),
-    admin_user: User = Depends(get_current_admin)
+    user: User = Depends(get_current_admin_or_ta)
 ):
     # Call the CRUD function
     return get_homework_submissions(db, homework_id)
@@ -64,7 +41,7 @@ def list_homework_submissions(
 def grade_homework(
     payload: HomeworkGrade,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin) # Only admins can access this
+    user: User = Depends(get_current_admin_or_ta)
 ):
     submission = grade_homework_submission(db, payload)
     if not submission:
@@ -97,3 +74,44 @@ async def submit_homework_endpoint(
     db.add(submission)
     db.commit()
     return {"message": "Submitted successfully", "url": formatted_path}
+
+
+# Upload image to homework question
+@router.post("/{homework_id}/image")
+async def upload_homework_image(
+    homework_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin)
+):
+    """Upload an image for a homework question"""
+    # Verify homework exists
+    homework = db.query(Homework).filter(Homework.id == homework_id).first()
+    if not homework:
+        raise HTTPException(status_code=404, detail="Homework not found")
+    
+    # Validate file type
+    allowed_types = {"image/jpeg", "image/png", "image/jpg"}
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Only JPEG and PNG images are allowed")
+    
+    # Validate file size (max 10MB)
+    file.file.seek(0, 2)
+    file_size = file.file.tell()
+    file.file.seek(0)
+    if file_size > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File size exceeds 10MB limit")
+    
+    # Save image
+    file_path = save_file(file, HOMEWORK_IMAGES_DIR)
+    image_url = f"/{file_path}"
+    
+    # Update homework with image URL
+    homework.image_url = image_url
+    db.commit()
+    
+    return {
+        "message": "Image uploaded successfully",
+        "image_url": image_url,
+        "homework_id": homework_id
+    }

@@ -4,12 +4,14 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import Sidebar from "../components/Dashboard/Sidebar";
+import TASidebar from "../components/TA/TASidebar";
 import Header from "../components/Dashboard/Header";
 import WelcomeSection from "../components/Dashboard/WelcomeSection";
 import QuickStats from "../components/Dashboard/QuickStats";
 import ActiveCourses from "../components/Dashboard/ActiveCourses";
 import Notifications from "../components/Dashboard/Notification";
 import AdminPanel from "../components/Admin/AdminPanel";
+import TAPanel from "../components/TA/TAPanel";
 
 interface User {
   username: string;
@@ -17,6 +19,7 @@ interface User {
   full_name?: string | null;
   id: number;
   is_admin?: boolean;
+  is_ta?: boolean;
 }
 
 const Dashboard = () => {
@@ -66,8 +69,14 @@ const Dashboard = () => {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Sidebar */}
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      {/* Conditional Sidebar based on user role */}
+      {user.is_admin ? (
+        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      ) : user.is_ta ? (
+        <TASidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      ) : (
+        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -83,6 +92,8 @@ const Dashboard = () => {
             {/* Show Admin Panel if user is admin */}
             {user.is_admin ? (
               <AdminPanel isAdmin={true} />
+            ) : user.is_ta ? (
+              <TAPanel />
             ) : (
               <>
                 {/* Regular Dashboard Content */}

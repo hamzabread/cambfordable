@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { BookOpen, AlertCircle, CheckCircle, Loader, X } from "lucide-react";
+import QuestionImageUpload from "../../QuestionImageUpload";
 
 interface Course {
   id: number;
@@ -16,6 +17,7 @@ interface Homework {
   title: string;
   description: string;
   due_date: string;
+  image_url?: string;
 }
 
 interface CreateHomeworkFormProps {
@@ -35,6 +37,8 @@ const CreateHomeworkForm = ({
     description: "",
     due_date: "",
   });
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [homeworkId, setHomeworkId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -90,6 +94,7 @@ const CreateHomeworkForm = ({
       );
 
       setSuccess(true);
+      setHomeworkId(response.data.id);
       setTimeout(() => {
         onSuccess(response.data);
         // Reset form
@@ -99,6 +104,8 @@ const CreateHomeworkForm = ({
           description: "",
           due_date: "",
         });
+        setImageUrl(null);
+        setHomeworkId(null);
         setSuccess(false);
       }, 1500);
     } catch (err: any) {
@@ -145,6 +152,24 @@ const CreateHomeworkForm = ({
         </div>
       )}
 
+      {/* Image Upload Section - Show after successful creation */}
+      {homeworkId && (
+        <div className="mb-6 p-6 bg-blue-50 border-2 border-blue-200 rounded-lg space-y-4">
+          <h4 className="font-semibold text-blue-900">📸 Add Question Image (Optional)</h4>
+          <p className="text-sm text-blue-700">
+            Upload an image to visualize the homework question for students
+          </p>
+          <QuestionImageUpload
+            questionId={homeworkId}
+            imageUrl={imageUrl}
+            type="homework"
+            onUploadSuccess={(url) => {
+              setImageUrl(url);
+            }}
+          />
+        </div>
+      )}
+
       {/* Error Message */}
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
@@ -157,6 +182,7 @@ const CreateHomeworkForm = ({
       )}
 
       {/* Form */}
+      {!success && (
       <form onSubmit={handleSubmit} className="space-y-5">
         {/* Course Selection */}
         <div>
@@ -254,6 +280,7 @@ const CreateHomeworkForm = ({
           </button>
         </div>
       </form>
+      )}
     </div>
   );
 };

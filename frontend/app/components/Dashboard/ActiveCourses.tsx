@@ -117,7 +117,7 @@ const ActiveCourses = () => {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
+                {/* <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
                   <div>
                     <p className="text-xs sm:text-sm text-slate-600">
                       Next class
@@ -132,21 +132,21 @@ const ActiveCourses = () => {
                       {course.progress}%
                     </p>
                   </div>
-                </div>
+                </div> */}
 
                 {/* Progress Bar */}
-                <div className="w-full bg-slate-200 rounded-full h-2">
+                {/* <div className="w-full bg-slate-200 rounded-full h-2">
                   <div
                     className="bg-slate-900 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${course.progress}%` }}
                   ></div>
-                </div>
+                </div> */}
               </div>
 
               {/* Right Section - Button */}
-              <button className="w-full sm:w-auto sm:ml-4 px-4 sm:px-6 py-2.5 sm:py-3 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition text-sm sm:text-base flex-shrink-0">
+              {/* <button className="w-full sm:w-auto sm:ml-4 px-4 sm:px-6 py-2.5 sm:py-3 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition text-sm sm:text-base flex-shrink-0">
                 Join Class
-              </button>
+              </button> */}
             </div>
           ))
         ) : (

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Sidebar from "../components/Dashboard/Sidebar";
 import Header from "../components/Dashboard/Header";
 import ZoomProvider from "../components/ZoomProvider";
+import PastClassAttachment from "../components/Schedule/PastClassAttachment";
 import {
   Video,
   Calendar,
@@ -26,6 +27,7 @@ interface LiveClass {
   meeting_id: string;
   join_url: string;
   is_live: boolean;
+  attachment_url?: string | null;
 }
 
 interface EnrolledCourse {
@@ -44,6 +46,7 @@ const LiveClassesPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [filterCourse, setFilterCourse] = useState<number | null>(null);
+  const [openAttachmentModal, setOpenAttachmentModal] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -411,7 +414,7 @@ const LiveClassesPage = () => {
             )}
 
             {/* Past Classes Section */}
-            {pastClasses.length > 0 && (
+            {pastClasses.length > 0 && openAttachmentModal === null && (
               <div>
                 <h2 className="text-2xl font-bold text-slate-900 mb-4">
                   Past Classes
@@ -449,10 +452,24 @@ const LiveClassesPage = () => {
                       <p className="text-xs text-slate-500 mt-4">
                         This class has ended
                       </p>
+
+                      {/* Attachment Component */}
+                      <PastClassAttachment
+                        classId={liveClass.id}
+                        className={liveClass.title}
+                        isAdmin={user?.is_admin || false}
+                        existingAttachmentUrl={liveClass.attachment_url}
+                        onModalStateChange={setOpenAttachmentModal}
+                      />
                     </div>
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* Modal Overlay for Active Attachment Upload */}
+            {openAttachmentModal !== null && (
+              <div className="fixed inset-0 bg-black/70 z-[9999]"></div>
             )}
 
             {/* No Classes Message */}

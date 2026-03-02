@@ -24,4 +24,5 @@ class UserCreate(UserBase):
 class UserMe(UserBase):
     id: int
     is_admin: bool
+    is_ta: bool
 

@@ -1,17 +1,18 @@
 "use client";
 
 import React, { useState } from "react";
-import { BookOpen, Video, Settings, Users } from "lucide-react";
+import { BookOpen, Video, Settings, Users, Shield } from "lucide-react";
 import CreateCourseForm from "../Admin/CreateCourseForm";
 import CreateLiveClassForm from "../Admin/CreateLiveClassForm";
 import EnrollStudentForm from "../Admin/EnrollStudentForm";
+import ManageAdminTA from "../Admin/ManageAdminTA";
 
 interface AdminPanelProps {
   isAdmin: boolean;
 }
 
 const AdminPanel = ({ isAdmin }: AdminPanelProps) => {
-  const [activeTab, setActiveTab] = useState<"courses" | "classes" | "enroll">("courses");
+  const [activeTab, setActiveTab] = useState<"courses" | "classes" | "enroll" | "manage-admin-ta">("courses");
 
   if (!isAdmin) {
     return null;
@@ -67,145 +68,127 @@ const AdminPanel = ({ isAdmin }: AdminPanelProps) => {
           <Users className="w-5 h-5" />
           Enroll Student
         </button>
+        <button
+          onClick={() => setActiveTab("manage-admin-ta")}
+          className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition whitespace-nowrap ${
+            activeTab === "manage-admin-ta"
+              ? "border-slate-900 text-slate-900"
+              : "border-transparent text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          <Shield className="w-5 h-5" />
+          Manage Admin/TA
+        </button>
       </div>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Main Form */}
+      {activeTab === "enroll" || activeTab === "manage-admin-ta" ? (
+        // Full width layout for enroll and manage-admin-ta (they have guidelines at the bottom)
         <div>
-          {activeTab === "courses" && <CreateCourseForm />}
-          {activeTab === "classes" && <CreateLiveClassForm />}
           {activeTab === "enroll" && <EnrollStudentForm />}
+          {activeTab === "manage-admin-ta" && <ManageAdminTA />}
         </div>
+      ) : (
+        // Two column layout for courses and classes
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Main Form */}
+          <div>
+            {activeTab === "courses" && <CreateCourseForm />}
+            {activeTab === "classes" && <CreateLiveClassForm />}
+          </div>
 
-        {/* Info Panel */}
-        <div className="hidden lg:block">
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 sticky top-20">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">
-              {activeTab === "courses"
-                ? "Course Guidelines"
-                : activeTab === "classes"
-                ? "Live Class Guidelines"
-                : "Enrollment Guidelines"}
-            </h3>
+          {/* Info Panel */}
+          <div className="hidden lg:block">
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 sticky top-20">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">
+                {activeTab === "courses"
+                  ? "Course Guidelines"
+                  : "Live Class Guidelines"}
+              </h3>
 
-            {activeTab === "courses" ? (
-              <div className="space-y-4 text-sm text-slate-600">
-                <div>
-                  <h4 className="font-semibold text-slate-900 mb-1">
-                    📚 Course ID
-                  </h4>
-                  <p>
-                    Unique identifier for the course. Use numbers (e.g., 4, 5,
-                    6).
-                  </p>
+              {activeTab === "courses" ? (
+                <div className="space-y-4 text-sm text-slate-600">
+                  <div>
+                    <h4 className="font-semibold text-slate-900 mb-1">
+                      📚 Course ID
+                    </h4>
+                    <p>
+                      Unique identifier for the course. Use numbers (e.g., 4, 5,
+                      6).
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900 mb-1">
+                      📖 Course Name
+                    </h4>
+                    <p>
+                      Full name of the course (e.g., Chemistry, Physics,
+                      Mathematics).
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900 mb-1">
+                      🔢 Course Code
+                    </h4>
+                    <p>
+                      Standard course code (e.g., 9701 for Chemistry A-Level).
+                    </p>
+                  </div>
+                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-blue-800 text-xs font-medium">
+                      💡 Tip: Course codes should follow the Cambridge
+                      International Education format.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900 mb-1">
-                    📖 Course Name
-                  </h4>
-                  <p>
-                    Full name of the course (e.g., Chemistry, Physics,
-                    Mathematics).
-                  </p>
+              ) : (
+                <div className="space-y-4 text-sm text-slate-600">
+                  <div>
+                    <h4 className="font-semibold text-slate-900 mb-1">
+                      📚 Course Selection
+                    </h4>
+                    <p>
+                      Select an existing course to associate with this live
+                      class.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900 mb-1">
+                      🎓 Class Title
+                    </h4>
+                    <p>
+                      Descriptive title for the class session (e.g., "Organic
+                      Chemistry Lecture").
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900 mb-1">
+                      ⏰ Start & End Times
+                    </h4>
+                    <p>
+                      Set the exact time when the class starts and ends.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-900 mb-1">
+                      🔗 Meeting URL
+                    </h4>
+                    <p>
+                      Zoom, Google Meet, or any meeting platform URL.
+                    </p>
+                  </div>
+                  <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-green-800 text-xs font-medium">
+                      ✅ Classes are automatically marked as "LIVE" during the
+                      scheduled time.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900 mb-1">
-                    🔢 Course Code
-                  </h4>
-                  <p>
-                    Standard course code (e.g., 9701 for Chemistry A-Level).
-                  </p>
-                </div>
-                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-blue-800 text-xs font-medium">
-                    💡 Tip: Course codes should follow the Cambridge
-                    International Education format.
-                  </p>
-                </div>
-              </div>
-            ) : activeTab === "classes" ? (
-              <div className="space-y-4 text-sm text-slate-600">
-                <div>
-                  <h4 className="font-semibold text-slate-900 mb-1">
-                    📚 Course Selection
-                  </h4>
-                  <p>
-                    Select an existing course to associate with this live
-                    class.
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900 mb-1">
-                    🎓 Class Title
-                  </h4>
-                  <p>
-                    Descriptive title for the class session (e.g., "Organic
-                    Chemistry Lecture").
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900 mb-1">
-                    ⏰ Start & End Times
-                  </h4>
-                  <p>
-                    Set the exact time when the class starts and ends.
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900 mb-1">
-                    🔗 Meeting URL
-                  </h4>
-                  <p>
-                    Zoom, Google Meet, or any meeting platform URL.
-                  </p>
-                </div>
-                <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-green-800 text-xs font-medium">
-                    ✅ Classes are automatically marked as "LIVE" during the
-                    scheduled time.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4 text-sm text-slate-600">
-                <div>
-                  <h4 className="font-semibold text-slate-900 mb-1">
-                    🔍 Search Students
-                  </h4>
-                  <p>
-                    Use the search bar to find students by name, username, or
-                    email address.
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900 mb-1">
-                    👤 Single Selection
-                  </h4>
-                  <p>
-                    Click on a student to select them. Only one student can be
-                    enrolled at a time.
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-slate-900 mb-1">
-                    📚 Course Selection
-                  </h4>
-                  <p>
-                    Choose which course to enroll the student into.
-                  </p>
-                </div>
-                <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                  <p className="text-purple-800 text-xs font-medium">
-                    ✅ Instant confirmation upon successful enrollment. Students
-                    will see the course in their dashboard immediately.
-                  </p>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

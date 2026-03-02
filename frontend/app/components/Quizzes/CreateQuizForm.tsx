@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Plus, X, Trash2 } from "lucide-react";
+import { Plus, X, Trash2, ImageIcon } from "lucide-react";
+import QuestionImageUpload from "../QuestionImageUpload";
 
 interface Course {
   id: number;
@@ -20,6 +21,8 @@ interface Question {
   is_mcq: boolean;
   marks: number;
   options: Option[];
+  image_url?: string;
+  temp_id?: string;
 }
 
 const CreateQuizForm = () => {
@@ -44,8 +47,12 @@ const CreateQuizForm = () => {
         { option_text: "", is_correct: true },
         { option_text: "", is_correct: false },
       ],
+      temp_id: Math.random().toString(),
     },
   ]);
+  const [uploadingImages, setUploadingImages] = useState<Set<string>>(new Set());
+  const [imageFiles, setImageFiles] = useState<{ [key: string]: File }>({});
+  const [createdQuizId, setCreatedQuizId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchCourses();
@@ -82,6 +89,7 @@ const CreateQuizForm = () => {
           { option_text: "", is_correct: true },
           { option_text: "", is_correct: false },
         ],
+        temp_id: Math.random().toString(),
       },
     ]);
   };
@@ -147,7 +155,7 @@ const CreateQuizForm = () => {
         })),
       };
 
-      await axios.post(
+      const createResponse = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/quizzes/`,
         payload,
         {
@@ -155,13 +163,48 @@ const CreateQuizForm = () => {
         }
       );
 
+      // Upload any pending images using real question IDs
+      const createdQuiz = createResponse.data;
+      if (createdQuiz.id && createdQuiz.questions && Object.keys(imageFiles).length > 0) {
+        console.log(`📤 Uploading ${Object.keys(imageFiles).length} images...`);
+        for (let i = 0; i < questions.length; i++) {
+          const tempId = questions[i].temp_id || "";
+          const file = imageFiles[tempId];
+          if (file && createdQuiz.questions[i]) {
+            const formData = new FormData();
+            formData.append("file", file);
+            
+            try {
+              console.log(`Uploading image for question ${createdQuiz.questions[i].id}:`, file.name);
+              const imgResponse = await axios.post(
+                `${process.env.NEXT_PUBLIC_API_URL}/quizzes/questions/${createdQuiz.questions[i].id}/image`,
+                formData,
+                {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "multipart/form-data",
+                  },
+                }
+              );
+              console.log(`✅ Image uploaded successfully:`, imgResponse.data.image_url);
+            } catch (imgErr: any) {
+              console.error(`❌ Failed to upload image for question ${i}:`, imgErr.response?.data || imgErr.message);
+              // Continue with other uploads even if one fails
+            }
+          }
+        }
+      }
+
       setSuccess(`✅ Quiz "${quizTitle}" created successfully!`);
-      // Reset form
+      setCreatedQuizId(createdQuiz.id);
+      
+      // Reset form and image storage
       setSelectedCourse(null);
       setQuizTitle("");
       setTotalMarks(10);
       setDeadline("");
       setAllowLate(false);
+      setImageFiles({});
       setQuestions([
         {
           question_text: "",
@@ -171,6 +214,7 @@ const CreateQuizForm = () => {
             { option_text: "", is_correct: true },
             { option_text: "", is_correct: false },
           ],
+          temp_id: Math.random().toString(),
         },
       ]);
       setTimeout(() => setSuccess(null), 3000);
@@ -311,6 +355,53 @@ const CreateQuizForm = () => {
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
+
+            {/* Question Image */}
+            {question.image_url && (
+              <div className="border border-slate-300 rounded-lg overflow-hidden bg-slate-50 p-4">
+                <img
+                  src={question.image_url.startsWith('blob:') || question.image_url.startsWith('http') 
+                    ? question.image_url 
+                    : `${process.env.NEXT_PUBLIC_API_URL}${question.image_url}`}
+                  alt="Question"
+                  className="w-full h-auto max-h-48 object-contain"
+                />
+                <button
+                  type="button"
+                  onClick={() => updateQuestion(qIdx, "image_url", undefined)}
+                  className="mt-2 text-xs text-red-600 hover:text-red-700 font-medium"
+                >
+                  Remove Image
+                </button>
+              </div>
+            )}
+
+            {!question.image_url && (
+              <details className="border border-slate-300 rounded-lg p-3 bg-slate-50 group">
+                <summary className="cursor-pointer flex items-center gap-2 font-medium text-slate-700">
+                  <ImageIcon className="w-4 h-4" />
+                  Add Question Image (Optional)
+                </summary>
+                <div className="mt-3 pt-3 border-t border-slate-300">
+                  <QuestionImageUpload
+                    questionId={parseInt(question.temp_id || "0")}
+                    imageUrl={question.image_url}
+                    type="quiz"
+                    onUploadSuccess={(url) => {
+                      updateQuestion(qIdx, "image_url", url);
+                    }}
+                    onLocalFileSelected={(file) => {
+                      if (file) {
+                        setImageFiles({
+                          ...imageFiles,
+                          [question.temp_id || ""]: file,
+                        });
+                      }
+                    }}
+                  />
+                </div>
+              </details>
+            )}
 
             {/* Question Type & Marks */}
             <div className="grid grid-cols-2 gap-4">

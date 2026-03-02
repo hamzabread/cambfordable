@@ -12,6 +12,7 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
 
     is_admin = Column(Boolean, default=False, nullable=False)
+    is_ta = Column(Boolean, default=False, nullable=False)
 
     enrollments = relationship(
         "Enrollment",

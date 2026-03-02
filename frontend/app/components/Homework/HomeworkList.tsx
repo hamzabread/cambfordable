@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Calendar, Clock, AlertCircle, FileText, Upload, Loader } from "lucide-react";
+import { Calendar, Clock, AlertCircle, FileText, Upload, Loader, ImageIcon, X, Download } from "lucide-react";
 import HomeworkSubmitModal from "./HomeworkSubmitModal";
 
 interface Homework {
@@ -11,6 +11,7 @@ interface Homework {
   title: string;
   description: string;
   due_date: string;
+  image_url?: string | null;
 }
 
 interface User {
@@ -31,6 +32,7 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
   );
   const [showModal, setShowModal] = useState(false);
   const [submittedHomeworkIds, setSubmittedHomeworkIds] = useState<number[]>([]);
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -90,25 +92,7 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
         if (err.response?.status === 401) {
           setError("Session expired. Please login again.");
         } else {
-          // Fallback data
-          setHomeworks([
-            {
-              id: 1,
-              course_id: 1,
-              title: "Organic Chemistry Problem Set",
-              description:
-                "Complete problems 1-15 from Chapter 6 on organic reaction mechanisms.",
-              due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-            },
-            {
-              id: 2,
-              course_id: 2,
-              title: "Calculus Assignment",
-              description:
-                "Solve differential equations exercises 1-20 on page 45.",
-              due_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-            },
-          ]);
+          setError("Failed to load homework. Please try again later.");
         }
       } finally {
         setLoading(false);
@@ -116,7 +100,7 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
     };
 
     fetchData();
-  }, [user]);
+  }, []);
 
   const getCourseName = (courseId: number) => {
     return enrolledCourses.find((c) => c.id === courseId)?.name || "Course";
@@ -171,26 +155,54 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
     );
   }
 
+  if (enrolledCourses.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <FileText className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+        <p className="text-slate-600 font-medium">No courses enrolled</p>
+        <p className="text-slate-500 text-sm mt-2">Enroll in courses to see assigned homework</p>
+      </div>
+    );
+  }
+
   return (
     <>
-      {homeworks.length > 0 ? (
-        <div className="space-y-4">
-          {homeworks.map((homework) => {
-            const overdue = isOverdue(homework.due_date);
-            const dueToday = isDueToday(homework.due_date);
-            const daysLeft = daysUntilDue(homework.due_date);
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm flex items-center gap-3 mb-6">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
-            return (
-              <div
-                key={homework.id}
-                className={`bg-white rounded-lg shadow-sm border-l-4 p-6 hover:shadow-md transition ${
-                  overdue
-                    ? "border-l-red-500 bg-red-50"
-                    : dueToday
-                    ? "border-l-orange-500 bg-orange-50"
-                    : "border-l-blue-500 bg-blue-50"
-                }`}
-              >
+      {/* Group homeworks by course */}
+      <div className="space-y-6">
+        {enrolledCourses.map((course) => {
+          const courseHomeworks = homeworks.filter(hw => hw.course_id === course.id);
+          
+          return (
+            <div key={course.id} className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
+              <h2 className="text-xl font-bold text-slate-900 mb-4">{course.name}</h2>
+              
+              {courseHomeworks.length === 0 ? (
+                <p className="text-slate-600">No pending homework for this course</p>
+              ) : (
+                <div className="space-y-4">
+                  {courseHomeworks.map((homework) => {
+                    const overdue = isOverdue(homework.due_date);
+                    const dueToday = isDueToday(homework.due_date);
+                    const daysLeft = daysUntilDue(homework.due_date);
+
+                    return (
+                      <div
+                        key={homework.id}
+                        className={`bg-white rounded-lg shadow-sm border-l-4 p-6 hover:shadow-md transition ${
+                          overdue
+                            ? "border-l-red-500 bg-red-50"
+                            : dueToday
+                            ? "border-l-orange-500 bg-orange-50"
+                            : "border-l-blue-500 bg-blue-50"
+                        }`}
+                      >
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                   {/* Left Section */}
                   <div className="flex-1">
@@ -209,6 +221,40 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
                     <p className="text-slate-700 text-sm mb-4">
                       {homework.description}
                     </p>
+
+                    {/* Question Image */}
+                    {homework.image_url && (
+                      <div className="mb-4 p-3 bg-slate-100 rounded-lg border border-slate-300">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                            <ImageIcon className="w-4 h-4" />
+                            Question Visual
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setViewingImage(homework.image_url || null)}
+                              className="text-blue-600 hover:text-blue-700 text-xs font-medium"
+                            >
+                              View
+                            </button>
+                            <a
+                              href={homework.image_url}
+                              download
+                              className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 text-xs font-medium"
+                            >
+                              <Download className="w-3 h-3" />
+                              Download
+                            </a>
+                          </div>
+                        </div>
+                        <img
+                          src={homework.image_url}
+                          alt="Homework question"
+                          className="w-full h-auto max-h-[200px] object-contain rounded cursor-pointer"
+                          onClick={() => setViewingImage(homework.image_url || null)}
+                        />
+                      </div>
+                    )}
 
                     {/* Due Date Info */}
                     <div className="flex flex-wrap gap-4">
@@ -268,21 +314,15 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
                     </button>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-12 text-center">
-          <FileText className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-          <p className="text-slate-600 text-lg font-medium">
-            No homework assigned
-          </p>
-          <p className="text-slate-500 text-sm mt-2">
-            Check back later for new assignments
-          </p>
-        </div>
-      )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
       {/* Submit Modal */}
       {selectedHomework && (
@@ -306,6 +346,57 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
             setSelectedHomework(null);
           }}
         />
+      )}
+
+      {/* Image Viewer Modal */}
+      {viewingImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-70 z-[10000] flex items-center justify-center p-4"
+          onClick={() => setViewingImage(null)}
+        >
+          <div
+            className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+              <h2 className="text-lg font-semibold text-slate-900">Question Image</h2>
+              <button
+                onClick={() => setViewingImage(null)}
+                className="text-slate-500 hover:text-slate-700 transition"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Image */}
+            <div className="flex-1 overflow-auto flex items-center justify-center p-4 bg-slate-50">
+              <img
+                src={viewingImage}
+                alt="Homework question"
+                className="max-w-full max-h-full object-contain"
+              />
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-200 flex gap-3">
+              <a
+                href={viewingImage}
+                download
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </a>
+              <button
+                onClick={() => setViewingImage(null)}
+                className="flex-1 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-900 font-medium rounded-lg transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

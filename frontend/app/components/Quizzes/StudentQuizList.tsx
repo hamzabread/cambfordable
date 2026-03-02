@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { Clock, AlertCircle, CheckCircle, FileText } from "lucide-react";
+import { Clock, AlertCircle, CheckCircle, FileText, BarChart3 } from "lucide-react";
 
 interface Quiz {
   id: number;
@@ -191,18 +191,31 @@ const StudentQuizList: React.FC<StudentQuizListProps> = ({
                       <div className="px-3 py-1 bg-green-100 border border-green-300 rounded-full text-green-700 text-xs font-bold">Active</div>
                     )}
 
-                    {/* Action Button */}
-                    <button
-                      disabled={!canTakeQuiz}
-                      onClick={() => router.push(`/quiz/${quiz.id}`)}
-                      className={`px-4 py-2 font-bold rounded-lg transition text-sm w-full md:w-auto ${
-                        !canTakeQuiz
-                          ? "bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300"
-                          : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-                      }`}
-                    >
-                      {quiz.is_submitted ? "Completed" : isOverdue && !quiz.allow_late ? "Closed" : "Start Quiz"}
-                    </button>
+                    {/* Action Buttons */}
+                    <div className="flex flex-col gap-1 w-full md:w-auto">
+                      <button
+                        disabled={!canTakeQuiz}
+                        onClick={() => router.push(`/quiz/${quiz.id}`)}
+                        className={`px-4 py-2 font-bold rounded-lg transition text-sm w-full ${
+                          !canTakeQuiz
+                            ? "bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300"
+                            : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                        }`}
+                      >
+                        {quiz.is_submitted ? "Completed" : isOverdue && !quiz.allow_late ? "Closed" : "Start Quiz"}
+                      </button>
+                      
+                      {/* View Grades Button - Show when submitted */}
+                      {quiz.is_submitted && (
+                        <button
+                          onClick={() => router.push(`/quiz/${quiz.id}/grades`)}
+                          className="px-4 py-2 font-bold rounded-lg transition text-sm w-full bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 flex items-center justify-center gap-2"
+                        >
+                          <BarChart3 className="w-4 h-4" />
+                          View Grades
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

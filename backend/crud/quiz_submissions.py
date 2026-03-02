@@ -170,6 +170,7 @@ def get_student_quiz_result(db: Session, quiz_id: int, user_id: int):
         "is_late": submission.is_late,
         "submitted_at": submission.submitted_at,
         "flagged_for_review": submission.flagged_for_review,
+        "remarks": submission.remarks,
     }
 
 

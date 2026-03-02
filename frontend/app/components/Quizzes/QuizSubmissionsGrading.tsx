@@ -44,16 +44,19 @@ interface Quiz {
   title: string;
   total_marks: number;
   course_id: number;
+  course_name?: string;
 }
 
 interface QuizSubmissionsGradingProps {
   quizId?: number;
   quizTitle?: string;
+  isTAMode?: boolean;
 }
 
 const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
   quizId: initialQuizId,
   quizTitle: initialQuizTitle,
+  isTAMode = false,
 }) => {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -131,12 +134,14 @@ const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
     try {
       const token = localStorage.getItem("access_token");
       
-      const coursesRes = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/courses/`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      // Use /courses/me for TAs, /courses/ for admins
+      const coursesUrl = isTAMode 
+        ? `${process.env.NEXT_PUBLIC_API_URL}/courses/me`
+        : `${process.env.NEXT_PUBLIC_API_URL}/courses/`;
+      
+      const coursesRes = await axios.get(coursesUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       const allQuizzes: Quiz[] = [];
 
@@ -148,7 +153,12 @@ const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
               headers: { Authorization: `Bearer ${token}` },
             }
           );
-          allQuizzes.push(...quizzesRes.data);
+          // Add course_name to each quiz
+          const quizzesWithCourse = quizzesRes.data.map((quiz: any) => ({
+            ...quiz,
+            course_name: course.name,
+          }));
+          allQuizzes.push(...quizzesWithCourse);
         } catch (err) {
           console.log(`No quizzes for course ${course.id}`);
         }
@@ -330,28 +340,58 @@ const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {quizzes.map((quiz) => (
-              <button
-                key={quiz.id}
-                onClick={() => handleSelectQuiz(quiz.id)}
-                className="w-full text-left p-4 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition bg-white shadow-sm"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-slate-900">{quiz.title}</p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Total Marks: {quiz.total_marks}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-blue-600 font-medium">
-                      Click to grade →
-                    </p>
+          <div className="space-y-8">
+            {(() => {
+              // Group quizzes by course
+              const courseMap = new Map<number, { name: string; quizzes: Quiz[] }>();
+              quizzes.forEach((quiz) => {
+                if (!courseMap.has(quiz.course_id)) {
+                  courseMap.set(quiz.course_id, {
+                    name: quiz.course_name || "Unknown Course",
+                    quizzes: [],
+                  });
+                }
+                courseMap.get(quiz.course_id)!.quizzes.push(quiz);
+              });
+
+              // Convert to sorted array
+              const courses = Array.from(courseMap.entries())
+                .map(([, value]) => value)
+                .sort((a, b) => a.name.localeCompare(b.name));
+
+              return courses.map((course) => (
+                <div key={course.name}>
+                  <h4 className="text-xl font-bold text-slate-900 mb-4">
+                    {course.name}
+                  </h4>
+                  <div className="space-y-3">
+                    {course.quizzes.map((quiz) => (
+                      <button
+                        key={quiz.id}
+                        onClick={() => handleSelectQuiz(quiz.id)}
+                        className="w-full text-left p-4 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition bg-white shadow-sm"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-slate-900">
+                              {quiz.title}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">
+                              Total Marks: {quiz.total_marks}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-blue-600 font-medium">
+                              Click to grade →
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 </div>
-              </button>
-            ))}
+              ));
+            })()}
           </div>
         )}
       </div>

@@ -10,6 +10,7 @@ class Homework(Base):
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
     title = Column(String, nullable=False)
     description = Column(String, nullable=True)
+    image_url = Column(String, nullable=True)  # URL to homework question image
     due_date = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc))
     
     course = relationship("Course", back_populates="homeworks")

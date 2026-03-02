@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import {
   Download,
@@ -9,6 +10,7 @@ import {
   File,
   Calendar,
   Loader,
+  BarChart3,
 } from "lucide-react";
 
 interface Submission {
@@ -26,6 +28,11 @@ interface HomeworkInfo {
   };
 }
 
+interface Course {
+  id: number;
+  title: string;
+}
+
 interface User {
   id: number;
 }
@@ -35,8 +42,10 @@ interface SubmissionsListProps {
 }
 
 const SubmissionsList = ({ user }: SubmissionsListProps) => {
+  const router = useRouter();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [homeworkInfo, setHomeworkInfo] = useState<HomeworkInfo>({});
+  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +56,15 @@ const SubmissionsList = ({ user }: SubmissionsListProps) => {
 
       try {
         setLoading(true);
+
+        // Fetch enrolled courses
+        const coursesRes = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/enrollments/me`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        setEnrolledCourses(coursesRes.data);
 
         // Fetch submissions
         const submissionsRes = await axios.get(
@@ -144,58 +162,98 @@ const SubmissionsList = ({ user }: SubmissionsListProps) => {
       )}
 
       {submissions.length > 0 ? (
-        <div className="space-y-4">
-          {submissions.map((submission) => (
-            <div
-              key={submission.id}
-              className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 hover:shadow-md transition"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                {/* Left Section */}
-                <div className="flex-1">
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="rounded-lg bg-green-100 p-2 flex-shrink-0">
-                      <CheckCircle className="w-6 h-6 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-900">
-                        {homeworkInfo[submission.homework_id]?.title ||
-                          "Homework"}
-                      </h3>
-                      <p className="text-sm text-slate-600 mt-1">
-                        Submitted
-                      </p>
-                    </div>
-                  </div>
+        <div className="space-y-6">
+          {enrolledCourses.map((course) => {
+            const courseSubmissions = submissions.filter(
+              (submission) =>
+                homeworkInfo[submission.homework_id]?.course_id === course.id
+            );
 
-                  {/* Submission Details */}
-                  <div className="flex flex-wrap gap-4 mt-4">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="w-4 h-4 text-slate-500" />
-                      <span className="text-slate-600">
-                        {formatDate(submission.submitted_at)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <File className="w-4 h-4 text-slate-500" />
-                      <span className="text-slate-600">
-                        {getFileName(submission.file_url)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+            return (
+              <div key={course.id}>
+                <h2 className="text-xl font-bold text-slate-900 mb-4">
+                  {course.title}
+                </h2>
+                {courseSubmissions.length > 0 ? (
+                  <div className="space-y-4">
+                    {courseSubmissions.map((submission) => (
+                      <div
+                        key={submission.id}
+                        className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 hover:shadow-md transition"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                          {/* Left Section */}
+                          <div className="flex-1">
+                            <div className="flex items-start gap-3 mb-3">
+                              <div className="rounded-lg bg-green-100 p-2 flex-shrink-0">
+                                <CheckCircle className="w-6 h-6 text-green-600" />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-bold text-slate-900">
+                                  {homeworkInfo[submission.homework_id]?.title ||
+                                    "Homework"}
+                                </h3>
+                                <p className="text-sm text-slate-600 mt-1">
+                                  Submitted
+                                </p>
+                              </div>
+                            </div>
 
-                {/* Right Section - Download Button */}
-                <button
-                  onClick={() => handleDownload(submission.file_url)}
-                  className="px-4 py-2 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition flex items-center gap-2 whitespace-nowrap"
-                >
-                  <Download className="w-4 h-4" />
-                  Download
-                </button>
+                            {/* Submission Details */}
+                            <div className="flex flex-wrap gap-4 mt-4">
+                              <div className="flex items-center gap-2 text-sm">
+                                <Calendar className="w-4 h-4 text-slate-500" />
+                                <span className="text-slate-600">
+                                  {formatDate(submission.submitted_at)}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm">
+                                <File className="w-4 h-4 text-slate-500" />
+                                <span className="text-slate-600">
+                                  {getFileName(submission.file_url)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right Section - Action Buttons */}
+                          <div className="flex flex-col sm:flex-row gap-2 whitespace-nowrap">
+                            <button
+                              onClick={() =>
+                                handleDownload(submission.file_url)
+                              }
+                              className="px-4 py-2 bg-slate-900 text-white font-semibold rounded-lg hover:bg-slate-800 transition flex items-center justify-center gap-2"
+                            >
+                              <Download className="w-4 h-4" />
+                              Download
+                            </button>
+                            <button
+                              onClick={() =>
+                                router.push(
+                                  `/homework/${submission.homework_id}/grades`
+                                )
+                              }
+                              className="px-4 py-2 bg-green-50 text-green-700 border border-green-200 font-semibold rounded-lg hover:bg-green-100 transition flex items-center justify-center gap-2"
+                            >
+                              <BarChart3 className="w-4 h-4" />
+                              View Grade
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8 text-center">
+                    <File className="w-8 h-8 text-slate-400 mx-auto mb-3" />
+                    <p className="text-slate-600 font-medium">
+                      No submissions for this course
+                    </p>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-12 text-center">

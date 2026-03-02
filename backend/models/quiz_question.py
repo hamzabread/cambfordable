@@ -10,6 +10,7 @@ class QuizQuestion(Base):
     question_text = Column(String, nullable=False)
     is_mcq = Column(Boolean, default=True)  # True = MCQ, False = File Upload
     marks = Column(Integer, nullable=False)
+    image_url = Column(String, nullable=True)  # URL to question image
 
     quiz = relationship("Quiz", back_populates="questions")
     options = relationship("QuizOption", back_populates="question")

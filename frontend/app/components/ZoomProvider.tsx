@@ -106,6 +106,18 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
               isResizable: false,
               viewType: "gallery",
             },
+            chat: isAdmin
+              ? {}
+              : {
+                  // Students can only chat with host
+                  allowPrivateChat: false,
+                },
+            screenShare: isAdmin
+              ? {}
+              : {
+                  // Students cannot share screen
+                  sharePermission: false,
+                },
           },
         });
 
@@ -169,6 +181,18 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
             pointer-events: auto !important; 
           }
 
+          /* ===== SCREEN SHARE FULLSCREEN SETTINGS ===== */
+          #zmmtg-root.zm-embedded.zm-screen-sharing-view .share-view-container,
+          #zmmtg-root.zm-embedded.zm-screen-sharing-view [class*="share-view"],
+          #zmmtg-root.zm-embedded.zm-screen-sharing-view .screen-share-container {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            flex: 1 !important;
+            object-fit: contain !important;
+          }
+
           /* Ensure screenshare and video containers take full screen */
           #zmmtg-root .share-view-container,
           #zmmtg-root .share-view,
@@ -192,6 +216,13 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
             width: 100% !important;
             height: 100% !important;
             object-fit: contain !important;
+          }
+
+          /* Hide participant gallery during screen share for cleaner view */
+          #zmmtg-root.zm-screen-sharing-view .gallery-layout,
+          #zmmtg-root.zm-screen-sharing-view .filmstrip-container,
+          #zmmtg-root.zm-screen-sharing-view [class*="participant-video"] {
+            display: none !important;
           }
           
           ${
@@ -319,27 +350,12 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
         }}
       />
 
-      <div className="absolute top-4 right-4 z-[100] flex items-center gap-3">
+      <div className="absolute top-4 right-4 z-50">
         <button
           onClick={enterFullScreen}
           className="bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-full backdrop-blur-md border border-white/20"
         >
           ⛶
-        </button>
-        <button
-          onClick={async () => {
-            if (clientRef.current) {
-              try {
-                // Using 'isAdmin' here from auth/me ensures the correct termination logic
-                await clientRef.current.leaveMeeting(isAdmin);
-              } catch (e) {
-                window.location.href = "/courses";
-              }
-            }
-          }}
-          className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-full font-bold shadow-2xl"
-        >
-          {isAdmin ? "END MEETING" : "LEAVE"}
         </button>
       </div>
 

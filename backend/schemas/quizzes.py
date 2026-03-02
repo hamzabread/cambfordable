@@ -10,6 +10,7 @@ class QuestionCreate(BaseModel):
     question_text: str
     is_mcq: bool
     marks: int
+    image_url: Optional[str] = None
     options: Optional[List[OptionCreate]] = None  # Only for MCQs
 
 class QuizCreate(BaseModel):

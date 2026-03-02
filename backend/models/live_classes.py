@@ -19,6 +19,9 @@ class LiveClass(Base):
     course = relationship("Course", back_populates="live_classes")
 
     meeting_password = Column(String, nullable=True)
+    
+    # Attachment for past classes
+    attachment_url = Column(String, nullable=True)
 
     @property
     def is_live(self) -> bool:
