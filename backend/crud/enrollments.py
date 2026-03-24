@@ -3,6 +3,7 @@ from models.enrollments import Enrollment
 from models.courses import Course
 from models.users import User
 from schemas.courses import CourseOut, EnrolledCourseBase
+from core.whatsapp import whatsapp_service
 
 def create_enrollment(db: Session, user: User, course_id: int):
     # check if enrollment already exists
@@ -22,6 +23,16 @@ def create_enrollment(db: Session, user: User, course_id: int):
     db.add(enrollment)
     db.commit()
     db.refresh(enrollment)
+    
+    # Send WhatsApp welcome message with group invite link
+    course = db.query(Course).filter(Course.id == course_id).first()
+    if course and user.phone_number:
+        whatsapp_service.send_welcome_message(
+            phone_number=user.phone_number,
+            course_name=course.name,
+            invite_link=course.whatsapp_invite_link,  # may be None
+        )
+
     return enrollment
 
 

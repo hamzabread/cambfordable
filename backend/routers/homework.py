@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from models.homeworks import HomeworkSubmission, Homework
 from routers.uploads import HOMEWORK_UPLOAD_DIR, HOMEWORK_IMAGES_DIR, save_file
+from routers.uploads import SOLUTIONS_UPLOAD_DIR
 from database import get_db
 from crud.homeworks import create_homework, get_course_homeworks, grade_homework_submission, submit_homework, get_user_homework_submissions, get_homework_submissions
 from schemas.homeworks import HomeworkCreate, HomeworkGrade, HomeworkOut, HomeworkSubmissionCreate, HomeworkSubmissionOut
@@ -115,3 +116,77 @@ async def upload_homework_image(
         "image_url": image_url,
         "homework_id": homework_id
     }
+
+
+# ── Solution file management (Admin / TA) ──────────────────
+
+@router.post("/{homework_id}/solution")
+async def upload_homework_solution(
+    homework_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_admin_or_ta),
+):
+    """Upload a solution file for a homework (visible to all students who submitted)"""
+    homework = db.query(Homework).filter(Homework.id == homework_id).first()
+    if not homework:
+        raise HTTPException(status_code=404, detail="Homework not found")
+
+    file_path = save_file(file, SOLUTIONS_UPLOAD_DIR)
+    homework.solution_url = f"/{file_path}"
+    db.commit()
+
+    return {
+        "message": "Solution uploaded successfully",
+        "solution_url": homework.solution_url,
+        "homework_id": homework_id,
+    }
+
+
+@router.delete("/{homework_id}/solution")
+def remove_homework_solution(
+    homework_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_admin_or_ta),
+):
+    """Remove a solution file from a homework"""
+    homework = db.query(Homework).filter(Homework.id == homework_id).first()
+    if not homework:
+        raise HTTPException(status_code=404, detail="Homework not found")
+
+    homework.solution_url = None
+    db.commit()
+
+    return {"message": "Solution removed", "homework_id": homework_id}
+
+
+@router.get("/{homework_id}/solution")
+def get_homework_solution(
+    homework_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """
+    Get the solution URL for a homework.
+    Only accessible by students who have submitted, or admin/TA.
+    """
+    homework = db.query(Homework).filter(Homework.id == homework_id).first()
+    if not homework:
+        raise HTTPException(status_code=404, detail="Homework not found")
+
+    if not homework.solution_url:
+        raise HTTPException(status_code=404, detail="No solution uploaded for this homework")
+
+    # Admin / TA can always view
+    if not (user.is_admin or getattr(user, "is_ta", False)):
+        submission = db.query(HomeworkSubmission).filter(
+            HomeworkSubmission.homework_id == homework_id,
+            HomeworkSubmission.user_id == user.id,
+        ).first()
+        if not submission:
+            raise HTTPException(
+                status_code=403,
+                detail="You must submit the homework before viewing the solution",
+            )
+
+    return {"solution_url": homework.solution_url, "homework_id": homework_id}

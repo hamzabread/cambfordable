@@ -13,6 +13,7 @@ class Quiz(Base):
     total_marks = Column(Integer, nullable=False)
     deadline = Column(TIMESTAMP(timezone=True), nullable=True)
     allow_late = Column(Boolean, default=False)
+    solution_url = Column(String, nullable=True)  # URL to uploaded solution file
 
     questions = relationship("QuizQuestion", back_populates="quiz")
     submissions = relationship("QuizSubmission", back_populates="quiz")

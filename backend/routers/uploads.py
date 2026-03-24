@@ -1,6 +1,7 @@
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from core.security import get_current_user
+import mimetypes
 import uuid
 import shutil
 import os
@@ -13,6 +14,7 @@ HOMEWORK_UPLOAD_DIR = "uploads/homeworks"
 HOMEWORK_IMAGES_DIR = "uploads/homework_images"
 QUIZ_IMAGES_DIR = "uploads/quiz_images"
 LIVE_CLASSES_UPLOAD_DIR = "uploads/live_classes"
+SOLUTIONS_UPLOAD_DIR = "uploads/solutions"
 
 # Ensure directories exist
 os.makedirs(QUIZ_UPLOAD_DIR, exist_ok=True)
@@ -20,6 +22,35 @@ os.makedirs(HOMEWORK_UPLOAD_DIR, exist_ok=True)
 os.makedirs(HOMEWORK_IMAGES_DIR, exist_ok=True)
 os.makedirs(QUIZ_IMAGES_DIR, exist_ok=True)
 os.makedirs(LIVE_CLASSES_UPLOAD_DIR, exist_ok=True)
+os.makedirs(SOLUTIONS_UPLOAD_DIR, exist_ok=True)
+
+
+def _guess_media_type(filename: str) -> str:
+    """Return a browser-friendly MIME type for common file extensions."""
+    mt, _ = mimetypes.guess_type(filename)
+    return mt or "application/octet-stream"
+
+
+def serve_file(file_path: str, filename: str, mode: str = "download") -> FileResponse:
+    """
+    Return a FileResponse.
+    mode="view"   → Content-Disposition: inline  (browser opens it)
+    mode="download"→ Content-Disposition: attachment (browser downloads)
+    """
+    if mode == "view":
+        media = _guess_media_type(filename)
+        return FileResponse(
+            path=file_path,
+            filename=filename,
+            media_type=media,
+            headers={"Content-Disposition": f'inline; filename="{filename}"'},
+        )
+    # download
+    return FileResponse(
+        path=file_path,
+        filename=filename,
+        media_type="application/octet-stream",
+    )
 
 # --- HELPER FUNCTION FOR FILE SAVING ---
 def save_file(file: UploadFile, destination_dir: str) -> str:
@@ -46,11 +77,11 @@ def upload_quiz_answer_file(file: UploadFile = File(...), user = Depends(get_cur
     return {"file_url": f"/{path}", "original_filename": file.filename}
 
 @router.get("/quiz_answers/{filename}")
-def download_quiz_answer(filename: str):
+def download_quiz_answer(filename: str, mode: str = Query("download")):
     file_path = os.path.join(QUIZ_UPLOAD_DIR, filename)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
-    return FileResponse(path=file_path, filename=filename)
+    return serve_file(file_path, filename, mode)
 
 
 # --- HOMEWORK ENDPOINTS (NEW) ---
@@ -67,7 +98,7 @@ def upload_homework_file(file: UploadFile = File(...), user = Depends(get_curren
 # backend/routers/uploads.py
 
 @router.get("/homeworks/{filename}")
-def download_homework(filename: str):
+def download_homework(filename: str, mode: str = Query("download")):
     # This specifically looks inside the 'uploads/homeworks' folder
     file_path = os.path.join(HOMEWORK_UPLOAD_DIR, filename)
     
@@ -75,14 +106,10 @@ def download_homework(filename: str):
         # Fallback: check the base uploads folder
         fallback_path = os.path.join("uploads", filename)
         if os.path.exists(fallback_path):
-            return FileResponse(fallback_path)
+            return serve_file(fallback_path, filename, mode)
         raise HTTPException(status_code=404, detail="Homework file not found")
         
-    return FileResponse(
-        path=file_path,
-        filename=filename,
-        media_type='application/octet-stream'
-    )
+    return serve_file(file_path, filename, mode)
 
 # --- LIVE CLASSES ENDPOINTS (NEW) ---
 
@@ -94,31 +121,37 @@ def upload_live_class_attachment(file: UploadFile = File(...), user = Depends(ge
     return {"file_url": f"/{path}", "original_filename": file.filename}
 
 @router.get("/live-classes/{filename}")
-def download_live_class_attachment(filename: str):
+def download_live_class_attachment(filename: str, mode: str = Query("download")):
     # This specifically looks inside the 'uploads/live_classes' folder
     file_path = os.path.join(LIVE_CLASSES_UPLOAD_DIR, filename)
     
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Attachment not found")
         
-    return FileResponse(
-        path=file_path,
-        filename=filename,
-        media_type='application/octet-stream'
-    )
+    return serve_file(file_path, filename, mode)
+
+# --- SOLUTIONS ENDPOINTS ---
+
+@router.get("/solutions/{filename}")
+def download_solution_file(filename: str, mode: str = Query("download")):
+    """Download or view a solution file"""
+    file_path = os.path.join(SOLUTIONS_UPLOAD_DIR, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Solution file not found")
+    return serve_file(file_path, filename, mode)
 
 # routers/uploads.py
 
 @router.get("/{filename}")  # This catches /uploads/profile.jpeg
-def get_root_upload(filename: str):
+def get_root_upload(filename: str, mode: str = Query("download")):
     file_path = os.path.join("uploads", filename)
     if os.path.exists(file_path):
-        return FileResponse(file_path)
+        return serve_file(file_path, filename, mode)
     
     # Also check homeworks folder as a fallback
     hw_path = os.path.join(HOMEWORK_UPLOAD_DIR, filename)
     if os.path.exists(hw_path):
-        return FileResponse(hw_path)
+        return serve_file(hw_path, filename, mode)
         
     raise HTTPException(status_code=404, detail="File not found")
 

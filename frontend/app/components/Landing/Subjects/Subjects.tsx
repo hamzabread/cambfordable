@@ -93,7 +93,7 @@ export default function CoursesSection() {
           />
           <div className="text-center z-10 flex-col flex">
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
-              Subjects I Teach
+              Subjects We Teach
             </h1>
             <p className="text-lg text-gray-700 max-w-2xl mx-auto">
               Comprehensive courses covering O-Levels, A-Levels, and specialized

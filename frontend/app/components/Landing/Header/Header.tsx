@@ -40,9 +40,9 @@ const Header = () => {
                   <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
                 </li>
                 <li className="group relative text-white cursor-pointer">
-                  <a href="/" className="relative font-light">
+                  <Link href="/our-teachers" className="relative font-light">
                     Our Teachers
-                  </a>
+                  </Link>
                   <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
                 </li>
                 <li className="group relative text-white cursor-pointer">
@@ -161,13 +161,13 @@ const Header = () => {
                 <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
               </li>
               <li className="group relative text-white cursor-pointer">
-                <a
-                  href="/"
+                <Link
+                  href="/our-teachers"
                   className="relative font-light"
                   onClick={() => setIsOpen(false)}
                 >
                   Our Teachers
-                </a>
+                </Link>
                 <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
               </li>
               <li className="group relative text-white cursor-pointer">

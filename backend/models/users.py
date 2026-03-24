@@ -13,6 +13,7 @@ class User(Base):
 
     is_admin = Column(Boolean, default=False, nullable=False)
     is_ta = Column(Boolean, default=False, nullable=False)
+    phone_number = Column(String, nullable=True)  # For WhatsApp integration
 
     enrollments = relationship(
         "Enrollment",

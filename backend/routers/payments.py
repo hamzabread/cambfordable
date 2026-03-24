@@ -78,11 +78,10 @@ async def jazzcash_callback(
     if response_code == "000":
         payment.status = "SUCCESS"
 
-        create_enrollment(
+        await create_enrollment(
             db,
             user_id=payment.user_id,
             course_id=payment.course_id,
-            enrolled_by="PAYMENT"
         )
     else:
         payment.status = "FAILED"

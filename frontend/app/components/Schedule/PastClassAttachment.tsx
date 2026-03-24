@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import axios from "axios";
 import {
   File,
@@ -37,7 +38,12 @@ const PastClassAttachment = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -182,7 +188,7 @@ const PastClassAttachment = ({
                 className="px-3 py-1.5 bg-slate-900 text-white font-semibold rounded text-sm hover:bg-slate-800 transition flex items-center gap-2"
               >
                 <Upload className="w-4 h-4" />
-                Add Attachment
+                Add Lecture Notes
               </button>
             )}
           </div>
@@ -204,8 +210,8 @@ const PastClassAttachment = ({
         )}
       </div>
 
-      {/* Upload Modal */}
-      {showUploadModal && (
+      {/* Upload Modal - Rendered via Portal */}
+      {showUploadModal && isMounted && createPortal(
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full z-[10000]">
             {/* Header */}
@@ -335,7 +341,8 @@ const PastClassAttachment = ({
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

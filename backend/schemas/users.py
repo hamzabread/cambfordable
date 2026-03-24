@@ -19,10 +19,12 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    phone_number: Optional[str] = None
 
 
 class UserMe(UserBase):
     id: int
     is_admin: bool
     is_ta: bool
+    phone_number: Optional[str] = None
 

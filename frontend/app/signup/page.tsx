@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Mail, Lock, User, CheckCircle, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, User, CheckCircle, Eye, EyeOff, Phone } from "lucide-react";
 
 const SignupPage = () => {
   const [formData, setFormData] = useState({
@@ -12,6 +12,7 @@ const SignupPage = () => {
     email: "",
     full_name: "",
     password: "",
+    phone_number: "",
   });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -134,6 +135,26 @@ const SignupPage = () => {
                   className="w-full pl-10 pr-4 py-3 placeholder:text-[#666] text-black border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition"
                 />
               </div>
+            </div>
+
+            {/* Phone Number Field */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Phone Number <span className="text-slate-400 font-normal">(for WhatsApp)</span>
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-3.5 w-5 h-5 text-slate-400" />
+                <input
+                  type="tel"
+                  name="phone_number"
+                  placeholder="+92 300 1234567"
+                  value={formData.phone_number}
+                  onChange={handleChange}
+                  required
+                  className="w-full pl-10 placeholder:text-[#666] text-black pr-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition"
+                />
+              </div>
+              <p className="text-xs text-slate-400 mt-1">Include country code (e.g. +92 for Pakistan)</p>
             </div>
 
             {/* Password Field */}

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { CheckCircle, XCircle, Clock, Award, FileText, Eye, X, Download, ExternalLink, AlertTriangle } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Award, FileText, Eye, X, Download, ExternalLink, AlertTriangle, Upload, Trash2 } from "lucide-react";
 
 interface Submission {
   submission_id?: number;
@@ -69,6 +69,8 @@ const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
   const [viewingAnswers, setViewingAnswers] = useState<number | null>(null);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [loadingAnswers, setLoadingAnswers] = useState(false);
+  const [solutionUrl, setSolutionUrl] = useState<string | null>(null);
+  const [uploadingSolution, setUploadingSolution] = useState(false);
 
   const [selectedQuizId, setSelectedQuizId] = useState<number | null>(
     initialQuizId || null
@@ -214,6 +216,60 @@ const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
       setSelectedQuizId(quizId);
       setSelectedQuizTitle(quiz.title);
       setScores({});
+      setSolutionUrl(null);
+      fetchSolutionUrl(quizId);
+    }
+  };
+
+  const fetchSolutionUrl = async (quizId: number) => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/quizzes/${quizId}/solution`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSolutionUrl(res.data.solution_url);
+    } catch {
+      setSolutionUrl(null);
+    }
+  };
+
+  const handleUploadSolution = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedQuizId || !e.target.files?.[0]) return;
+    setUploadingSolution(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const formData = new FormData();
+      formData.append("file", e.target.files[0]);
+      const res = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/quizzes/${selectedQuizId}/solution`,
+        formData,
+        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
+      );
+      setSolutionUrl(res.data.solution_url);
+      setSuccess("Solution uploaded successfully");
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Failed to upload solution");
+    } finally {
+      setUploadingSolution(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleRemoveSolution = async () => {
+    if (!selectedQuizId) return;
+    try {
+      const token = localStorage.getItem("access_token");
+      await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_URL}/quizzes/${selectedQuizId}/solution`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSolutionUrl(null);
+      setSuccess("Solution removed");
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Failed to remove solution");
     }
   };
 
@@ -459,6 +515,58 @@ const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
               <p className="text-xs text-slate-600">Flagged</p>
               <p className="text-2xl font-bold text-red-600">{flaggedCount}</p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Solution Upload Section */}
+      <div className="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-purple-600" />
+              Solution File
+            </h4>
+            <p className="text-xs text-slate-500 mt-1">
+              Upload a solution — students who submitted can download it
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            {solutionUrl ? (
+              <>
+                <a
+                  href={`${process.env.NEXT_PUBLIC_API_URL}${solutionUrl}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg transition text-sm font-medium border border-purple-200"
+                >
+                  <Download className="w-4 h-4" />
+                  View Solution
+                </a>
+                <button
+                  onClick={handleRemoveSolution}
+                  className="flex items-center gap-1 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition text-sm font-medium border border-red-200"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Remove
+                </button>
+              </>
+            ) : (
+              <label className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer transition ${
+                uploadingSolution
+                  ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                  : "bg-purple-600 hover:bg-purple-700 text-white"
+              }`}>
+                <Upload className="w-4 h-4" />
+                {uploadingSolution ? "Uploading..." : "Upload Solution"}
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={handleUploadSolution}
+                  disabled={uploadingSolution}
+                />
+              </label>
+            )}
           </div>
         </div>
       </div>
@@ -734,7 +842,7 @@ const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
                               </div>
                               <div className="flex gap-2">
                                 <a
-                                  href={getFullFileUrl(studentAnswer)}
+                                  href={`${getFullFileUrl(studentAnswer)}?mode=view`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="flex items-center gap-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-medium"

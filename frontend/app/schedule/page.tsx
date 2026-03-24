@@ -414,8 +414,8 @@ const LiveClassesPage = () => {
             )}
 
             {/* Past Classes Section */}
-            {pastClasses.length > 0 && openAttachmentModal === null && (
-              <div>
+            {pastClasses.length > 0 && (
+              <div className={openAttachmentModal !== null ? "opacity-50 pointer-events-none" : ""}>
                 <h2 className="text-2xl font-bold text-slate-900 mb-4">
                   Past Classes
                 </h2>

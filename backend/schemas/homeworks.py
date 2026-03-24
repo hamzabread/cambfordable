@@ -8,6 +8,7 @@ class HomeworkBase(BaseModel):
     description: Optional[str] = None
     image_url: Optional[str] = None
     due_date: datetime
+    solution_url: Optional[str] = None
 
     class Config:
         from_attributes = True

@@ -12,6 +12,8 @@ from routers.quiz_submissions import router as quiz_submissions_router
 from routers.quizzes import router as quizzes_router
 from routers.uploads import router as uploads_router
 from routers.ta import router as ta_router
+from routers.whatsapp_admin import router as whatsapp_admin_router
+from routers.user_profile import router as user_profile_router
 from database import engine, Base
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -32,6 +34,7 @@ app.add_middleware(
         "http://127.0.0.1:8000",
         "https://mera-musafir-web.vercel.app",
         "https://cambfordable-production.up.railway.app",
+        
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -56,6 +59,8 @@ app.include_router(quiz_submissions_router)
 app.include_router(quizzes_router)
 app.include_router(uploads_router)  # This MUST come before the static mount
 app.include_router(ta_router)
+app.include_router(whatsapp_admin_router)
+app.include_router(user_profile_router)
 
 # Mount static files LAST - this catches any remaining /uploads/* GET requests
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")

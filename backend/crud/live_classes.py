@@ -4,8 +4,10 @@ from models.live_classes import LiveClass
 from schemas.live_classes import LiveClassCreate
 from models.enrollments import Enrollment
 from models.users import User
+from models.courses import Course
 from fastapi import HTTPException
 from core.zoom_api import create_zoom_meeting
+from core.whatsapp import whatsapp_service
 
 async def create_live_class(db: Session, title: str, course_id: int, starts_at: datetime, duration: int = 60):
     """
@@ -28,6 +30,22 @@ async def create_live_class(db: Session, title: str, course_id: int, starts_at: 
     db.add(live_class)
     db.commit()
     db.refresh(live_class)
+    
+    # 3. Send WhatsApp notification to all enrolled students individually
+    enrolled_users = (
+        db.query(User)
+        .join(Enrollment, Enrollment.user_id == User.id)
+        .filter(Enrollment.course_id == course_id)
+        .filter(User.phone_number.isnot(None))
+        .all()
+    )
+    phone_numbers = [u.phone_number for u in enrolled_users]
+    if phone_numbers:
+        whatsapp_service.send_live_class_notification(
+            phone_numbers=phone_numbers,
+            class_title=title,
+            join_url=zoom_meeting["join_url"],
+        )
 
     return {
         "id": live_class.id,

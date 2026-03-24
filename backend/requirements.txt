@@ -21,3 +21,4 @@ pydantic-settings
 requests
 PyJWT
 uvicorn[standard]
+twilio

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { CheckCircle, AlertCircle, MessageSquare, Clock } from "lucide-react";
+import { CheckCircle, AlertCircle, MessageSquare, Clock, Download } from "lucide-react";
 
 interface QuizGrade {
   submitted: boolean;
@@ -12,6 +12,7 @@ interface QuizGrade {
   submitted_at?: string;
   flagged_for_review?: boolean;
   remarks?: string;
+  solution_url?: string;
 }
 
 interface QuizGradesProps {
@@ -155,6 +156,33 @@ const QuizGrades: React.FC<QuizGradesProps> = ({ quizId }) => {
       {!grade.remarks && grade.score !== null && (
         <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 text-sm">
           No remarks provided by instructor yet.
+        </div>
+      )}
+
+      {/* Solution Download */}
+      {grade.solution_url && (
+        <div className="bg-white rounded-lg border border-purple-200 p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                <Download className="w-5 h-5 text-purple-600" />
+                Solution
+              </h3>
+              <p className="text-sm text-slate-500 mt-1">
+                Download the official solution for this quiz
+              </p>
+            </div>
+            <a
+              href={`${process.env.NEXT_PUBLIC_API_URL}${grade.solution_url}`}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition text-sm"
+            >
+              <Download className="w-4 h-4" />
+              Download Solution
+            </a>
+          </div>
         </div>
       )}
 

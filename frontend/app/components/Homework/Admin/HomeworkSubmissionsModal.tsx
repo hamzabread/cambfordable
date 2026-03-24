@@ -12,7 +12,10 @@ import {
   ExternalLink, 
   MessageSquare, 
   CheckCircle, 
-  Save 
+  Save,
+  Upload,
+  Trash2,
+  FileText 
 } from "lucide-react";
 
 interface Homework {
@@ -58,11 +61,64 @@ const HomeworkSubmissionsModal = ({
   const [remarks, setRemarks] = useState<{ [key: number]: string }>({});
   const [scores, setScores] = useState<{ [key: number]: string }>({});
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [solutionUrl, setSolutionUrl] = useState<string | null>(null);
+  const [uploadingSolution, setUploadingSolution] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
     fetchSubmissions();
+    fetchSolutionUrl();
   }, [homework.id, isOpen]);
+
+  const fetchSolutionUrl = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) return;
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/homeworks/${homework.id}/solution`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSolutionUrl(res.data.solution_url);
+    } catch {
+      setSolutionUrl(null);
+    }
+  };
+
+  const handleUploadSolution = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.[0]) return;
+    setUploadingSolution(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const formData = new FormData();
+      formData.append("file", e.target.files[0]);
+      const res = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/homeworks/${homework.id}/solution`,
+        formData,
+        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
+      );
+      setSolutionUrl(res.data.solution_url);
+    } catch (err: any) {
+      console.error("Failed to upload solution", err);
+      alert(err.response?.data?.detail || "Failed to upload solution");
+    } finally {
+      setUploadingSolution(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleRemoveSolution = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_URL}/homeworks/${homework.id}/solution`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSolutionUrl(null);
+    } catch (err: any) {
+      console.error("Failed to remove solution", err);
+      alert(err.response?.data?.detail || "Failed to remove solution");
+    }
+  };
 
   const fetchSubmissions = async () => {
     const token = localStorage.getItem("access_token");
@@ -196,6 +252,58 @@ const HomeworkSubmissionsModal = ({
             </div>
           </div>
 
+          {/* Solution Upload Section */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-semibold text-slate-900 flex items-center gap-2 text-sm">
+                  <FileText className="w-4 h-4 text-purple-600" />
+                  Solution File
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Students who submitted can download this
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {solutionUrl ? (
+                  <>
+                    <a
+                      href={`${process.env.NEXT_PUBLIC_API_URL}${solutionUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg transition text-xs font-medium border border-purple-200"
+                    >
+                      <Download className="w-3 h-3" />
+                      View
+                    </a>
+                    <button
+                      onClick={handleRemoveSolution}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition text-xs font-medium border border-red-200"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Remove
+                    </button>
+                  </>
+                ) : (
+                  <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition ${
+                    uploadingSolution
+                      ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                      : "bg-purple-600 hover:bg-purple-700 text-white"
+                  }`}>
+                    <Upload className="w-3 h-3" />
+                    {uploadingSolution ? "Uploading..." : "Upload Solution"}
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={handleUploadSolution}
+                      disabled={uploadingSolution}
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+          </div>
+
           {error && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3 mb-6 text-red-700">
               <AlertCircle className="w-5 h-5" />
@@ -247,7 +355,7 @@ const HomeworkSubmissionsModal = ({
                           </p>
                           <div className="flex gap-2">
                             <a
-                              href={getFullFileUrl(submission.file_url)}
+                              href={`${getFullFileUrl(submission.file_url)}?mode=view`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"

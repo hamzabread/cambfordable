@@ -11,6 +11,7 @@ class Course(Base):
     code = Column(String, nullable = False, unique = True)
     next_class = Column(String, nullable=True)
     time = Column(String, nullable=True)
+    whatsapp_invite_link = Column(String, nullable=True)  # Manual WhatsApp group invite link
 
     enrollments = relationship(
         "Enrollment",

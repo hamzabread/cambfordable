@@ -19,12 +19,28 @@ interface HomeworkGradesProps {
 
 const HomeworkGrades: React.FC<HomeworkGradesProps> = ({ homeworkId }) => {
   const [submission, setSubmission] = useState<HomeworkGrade | null>(null);
+  const [solutionUrl, setSolutionUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchGrade();
+    fetchSolution();
   }, [homeworkId]);
+
+  const fetchSolution = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) return;
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/homeworks/${homeworkId}/solution`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSolutionUrl(res.data.solution_url);
+    } catch {
+      setSolutionUrl(null);
+    }
+  };
 
   const fetchGrade = async () => {
     setLoading(true);
@@ -151,6 +167,33 @@ const HomeworkGrades: React.FC<HomeworkGradesProps> = ({ homeworkId }) => {
       {!submission.remark && submission.score !== null && (
         <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 text-sm">
           No feedback provided by instructor yet.
+        </div>
+      )}
+
+      {/* Solution Download */}
+      {solutionUrl && (
+        <div className="bg-white rounded-lg border border-purple-200 p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                <Download className="w-5 h-5 text-purple-600" />
+                Solution
+              </h3>
+              <p className="text-sm text-slate-500 mt-1">
+                Download the official solution for this homework
+              </p>
+            </div>
+            <a
+              href={`${process.env.NEXT_PUBLIC_API_URL}${solutionUrl}`}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition text-sm"
+            >
+              <Download className="w-4 h-4" />
+              Download Solution
+            </a>
+          </div>
         </div>
       )}
     </div>

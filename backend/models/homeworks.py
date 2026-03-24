@@ -12,6 +12,7 @@ class Homework(Base):
     description = Column(String, nullable=True)
     image_url = Column(String, nullable=True)  # URL to homework question image
     due_date = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc))
+    solution_url = Column(String, nullable=True)  # URL to uploaded solution file
     
     course = relationship("Course", back_populates="homeworks")
     submissions = relationship("HomeworkSubmission", back_populates="homework")
