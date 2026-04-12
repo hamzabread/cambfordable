@@ -61,7 +61,7 @@ export default function Teacher() {
               {tags.map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full border border-[#1E3557]/20 bg-white/80 px-3.5 py-1.5 text-sm font-semibold text-[#1E3557]"
+                  className="rounded-full border border-[#1E3557]/20 bg-[#FBF9F6]/85 px-3.5 py-1.5 text-sm font-semibold text-[#1E3557]"
                 >
                   {tag}
                 </span>
@@ -72,7 +72,7 @@ export default function Teacher() {
           <div className="relative max-w-[560px] mx-auto w-full">
             <div className="absolute -right-8 top-16 hidden lg:block w-44 h-44 rounded-[2rem] border-2 border-[#cbdf86] bg-[#d8ee95]/55" />
 
-            <div className="relative rounded-[2rem] bg-[#dbe9f5] p-4 sm:p-6 border border-white/70 shadow-[0_25px_70px_rgba(30,53,87,0.18)]">
+            <div className="relative rounded-[2rem] bg-[#dbe9f5] p-4 sm:p-6 border border-[#FBF9F6]/70 shadow-[0_25px_70px_rgba(30,53,87,0.18)]">
               <div className="relative h-[520px] sm:h-[590px] rounded-[1.5rem] overflow-hidden bg-[#d9dee7]">
                 <Image
                   src="/assets/certificate/ali-imran.jpg"
@@ -83,7 +83,7 @@ export default function Teacher() {
                 />
               </div>
 
-              <div className="absolute left-6 right-6 bottom-5 rounded-2xl bg-white/95 backdrop-blur-sm border border-slate-200 px-5 py-4 shadow-xl">
+              <div className="absolute left-6 right-6 bottom-5 rounded-2xl bg-[#FBF9F6]/95 backdrop-blur-sm border border-slate-200 px-5 py-4 shadow-xl">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-[34px] sm:text-[40px] font-bold leading-none text-slate-900">
@@ -106,7 +106,7 @@ export default function Teacher() {
               </div>
             </div>
 
-            <div className="absolute right-2.5 bottom-16 hidden lg:flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-3 py-2 shadow-lg">
+            <div className="absolute right-2.5 bottom-16 hidden lg:flex items-center gap-2 rounded-xl bg-[#FBF9F6] border border-slate-200 px-3 py-2 shadow-lg">
               <Medal className="w-4 h-4 text-[#1E3557]" />
               <span className="text-xs font-bold text-slate-700">IEEE Senior Member</span>
             </div>

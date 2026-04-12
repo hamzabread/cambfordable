@@ -3,8 +3,8 @@ import Image from 'next/image';
 
 const Banner = () => {
   return (
-    <section id='Home' className='bg-neutral-900 mt-0'>
-      <div className="relative w-full h-[90vh] md:h-[60vh] min-h-[400px] flex flex-col justify-center items-center text-center overflow-hidden">
+    <section id='Home' className='bg-[#0c1425] mt-0'>
+      <div className="relative w-full h-[92vh] md:h-[55vh] min-h-[460px] flex flex-col justify-center items-center text-center overflow-hidden">
         {/* Background Image */}
         <Image
           src="/assets/banner/banner.png"
@@ -16,7 +16,8 @@ const Banner = () => {
         />
 
         {/* Overlay for better text contrast */}
-        <div className="absolute inset-0 bg-black/40 z-5"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0b1323]/90 via-[#0f1f3f]/55 to-[#11244d]/85 z-5" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_22%,rgba(251,249,246,0.18),transparent_45%)] z-5" />
 
         {/* Content Container */}
         <div className="relative z-10 px-4 sm:px-6 md:px-8 lg:px-12 max-w-5xl mx-auto w-full">
@@ -26,17 +27,17 @@ const Banner = () => {
           </h1>
 
           {/* Subheading */}
-          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-100 max-w-3xl mx-auto mb-8 md:mb-10 leading-relaxed">
-            Join structured classes with qualified tutors. Real-time instruction, small groups, and the space to grow at your own pace.
+          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-slate-100 max-w-3xl mx-auto mb-8 md:mb-10 leading-relaxed">
+            Join structured O and A-Levels sessions, direct teacher support, and personalized quiz and homework feedback every week.
           </p>
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center items-center sm:items-start">
-            <button className='bg-white hover:bg-gray-100 cursor-pointer text-black px-6 sm:px-8 md:px-10 py-2.5 md:py-3 rounded-lg text-base md:text-lg font-semibold transition-all duration-300 transform hover:translate-y-[-2px] shadow-md hover:shadow-lg'>
+            <button className='bg-[#FBF9F6] hover:bg-[#f3efe9] cursor-pointer text-[#12213b] px-6 sm:px-8 md:px-10 py-2.5 md:py-3 rounded-lg text-base md:text-lg font-semibold transition-all duration-300 transform hover:translate-y-[-2px] shadow-md hover:shadow-lg'>
               Enroll Now
             </button>
 
-            <button className='border-2 border-white hover:bg-white hover:text-black cursor-pointer text-white px-6 sm:px-8 md:px-10 py-2.5 md:py-3 rounded-lg text-base md:text-lg font-semibold transition-all duration-300 transform hover:translate-y-[-2px]'>
+            <button className='border-2 border-[#FBF9F6] hover:bg-[#FBF9F6] hover:text-[#12213b] cursor-pointer text-[#FBF9F6] px-6 sm:px-8 md:px-10 py-2.5 md:py-3 rounded-lg text-base md:text-lg font-semibold transition-all duration-300 transform hover:translate-y-[-2px]'>
               Learn More
             </button>
           </div>

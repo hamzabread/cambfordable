@@ -24,7 +24,7 @@ const Header = () => {
 
   return (
     <>
-      <header className="bg-[#1E3557] top-0 z-20 w-full left-0 p-2.5 pb-[23px] pt-[22px] md:py-[30px] md:px-[60px]">
+      <header className="bg-gradient-to-r from-[#172b47] via-[#1E3557] to-[#284872] top-0 z-20 w-full left-0 p-2.5 pb-[23px] pt-[22px] md:py-[30px] md:px-[60px] shadow-[0_8px_22px_rgba(14,27,49,0.25)]">
         {/* Desktop Nav */}
         <nav className="hidden md:flex justify-between items-center">
           <Link href="/">
@@ -37,25 +37,25 @@ const Header = () => {
                   <Link href="/" className="relative font-light">
                     Home
                   </Link>
-                  <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
+                  <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-[#FBF9F6] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
                 </li>
                 <li className="group relative text-white cursor-pointer">
                   <Link href="/our-teachers" className="relative font-light">
                     Our Teachers
                   </Link>
-                  <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
+                  <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-[#FBF9F6] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
                 </li>
                 <li className="group relative text-white cursor-pointer">
                   <Link href="/contact" className="relative font-light">
                     Contact
                   </Link>
-                  <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
+                  <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-[#FBF9F6] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
                 </li>
                 <li className="group relative text-white cursor-pointer">
                   <Link href="/about" className="relative font-light">
                     More
                   </Link>
-                  <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
+                  <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-[#FBF9F6] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
                 </li>
               </ul>
             </div>
@@ -65,7 +65,7 @@ const Header = () => {
               {isLoggedIn ? (
                 <>
                   <Link href="/dashboard">
-                    <button className="p-3 py-1.5 cursor-pointer text-[18px] bg-white text-black rounded-md">
+                    <button className="p-3 py-1.5 cursor-pointer text-[18px] bg-[#FBF9F6] text-[#1E3557] rounded-md">
                       Dashboard
                     </button>
                   </Link>
@@ -79,7 +79,7 @@ const Header = () => {
               ) : (
                 <>
                   <Link href="/login">
-                    <button className="p-3 py-1.5 cursor-pointer text-[18px] bg-white text-black rounded-md">
+                    <button className="p-3 py-1.5 cursor-pointer text-[18px] bg-[#FBF9F6] text-[#1E3557] rounded-md">
                       Login
                     </button>
                   </Link>
@@ -109,7 +109,7 @@ const Header = () => {
               >
                 <path
                   d="M31.5057 18C31.5057 18.298 31.3873 18.5838 31.1766 18.7945C30.9659 19.0052 30.6801 19.1236 30.3821 19.1236H5.66337C5.36538 19.1236 5.0796 19.0052 4.86888 18.7945C4.65817 18.5838 4.53979 18.298 4.53979 18C4.53979 17.702 4.65817 17.4163 4.86888 17.2055C5.0796 16.9948 5.36538 16.8765 5.66337 16.8765H30.3821C30.6801 16.8765 30.9659 16.9948 31.1766 17.2055C31.3873 17.4163 31.5057 17.702 31.5057 18ZM5.66337 10.135H30.3821C30.6801 10.135 30.9659 10.0166 31.1766 9.80589C31.3873 9.59518 31.5057 9.30939 31.5057 9.0114C31.5057 8.71341 31.3873 8.42762 31.1766 8.21691C30.9659 8.00619 30.6801 7.88782 30.3821 7.88782H5.66337C5.36538 7.88782 5.0796 8.00619 4.86888 8.21691C4.65817 8.42762 4.53979 8.71341 4.53979 9.0114C4.53979 9.30939 4.65817 9.59518 4.86888 9.80589C5.0796 10.0166 5.36538 10.135 5.66337 10.135ZM30.3821 25.8651H5.66337C5.36538 25.8651 5.0796 25.9835 4.86888 26.1942C4.65817 26.4049 4.53979 26.6907 4.53979 26.9887C4.53979 27.2867 4.65817 27.5724 4.86888 27.7832C5.0796 27.9939 5.36538 28.1122 5.66337 28.1122H30.3821C30.6801 28.1122 30.9659 27.9939 31.1766 27.7832C31.3873 27.5724 31.5057 27.2867 31.5057 26.9887C31.5057 26.6907 31.3873 26.4049 31.1766 26.1942C30.9659 25.9835 30.6801 25.8651 30.3821 25.8651Z"
-                  fill="#FFF"
+                  fill="#FBF9F6"
                 />
               </svg>
             </button>
@@ -158,7 +158,7 @@ const Header = () => {
                 >
                   Home
                 </Link>
-                <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
+                <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-[#FBF9F6] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
               </li>
               <li className="group relative text-white cursor-pointer">
                 <Link
@@ -168,7 +168,7 @@ const Header = () => {
                 >
                   Our Teachers
                 </Link>
-                <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
+                <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-[#FBF9F6] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
               </li>
               <li className="group relative text-white cursor-pointer">
                 <Link
@@ -178,7 +178,7 @@ const Header = () => {
                 >
                   Contact
                 </Link>
-                <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
+                <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-[#FBF9F6] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
               </li>
               <li className="group relative text-white cursor-pointer">
                 <a
@@ -188,7 +188,7 @@ const Header = () => {
                 >
                   More
                 </a>
-                <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
+                <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-[#FBF9F6] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-in-out origin-left"></span>
               </li>
             </ul>
             <div className="mt-auto pt-6 border-b border-gray-600">
@@ -196,7 +196,7 @@ const Header = () => {
                 {isLoggedIn ? (
                   <>
                     <Link href="/dashboard" onClick={() => setIsOpen(false)}>
-                      <button className="w-full bg-white rounded-md px-5 py-3 text-[#1e3557] font-semibold">
+                      <button className="w-full bg-[#FBF9F6] rounded-md px-5 py-3 text-[#1e3557] font-semibold">
                         Dashboard
                       </button>
                     </Link>
@@ -212,7 +212,7 @@ const Header = () => {
                   </>
                 ) : (
                   <>
-                    <button className="w-full bg-white rounded-md px-5 py-3 text-[#1e3557] font-semibold">
+                    <button className="w-full bg-[#FBF9F6] rounded-md px-5 py-3 text-[#1e3557] font-semibold">
                       Login
                     </button>
                     <button className="w-full border border-white/50 text-white rounded-md px-5 py-3 font-semibold">

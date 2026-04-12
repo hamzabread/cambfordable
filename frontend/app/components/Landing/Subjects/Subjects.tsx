@@ -78,7 +78,7 @@ export default function CoursesSection() {
   ];
 
   return (
-    <div className="bg-[#FBFDFF] relative z-10 py-16 px-4 sm:px-6 lg:px-8">
+    <div className="bg-[#FBF9F6] relative z-10 py-18 px-4 sm:px-6 lg:px-8">
       
 
       <div className="max-w-7xl mx-auto">
@@ -92,10 +92,10 @@ export default function CoursesSection() {
             className="absolute left-[-25px] md:static"
           />
           <div className="text-center z-10 flex-col flex">
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+            <h1 className="text-4xl sm:text-5xl font-bold text-[#162842] mb-4">
               Subjects We Teach
             </h1>
-            <p className="text-lg text-gray-700 max-w-2xl mx-auto">
+            <p className="text-lg text-slate-700 max-w-2xl mx-auto">
               Comprehensive courses covering O-Levels, A-Levels, and specialized
               AI training
             </p>
@@ -120,24 +120,24 @@ export default function CoursesSection() {
                 key={course.id}
                 onMouseEnter={() => setHoveredId(course.id)}
                 onMouseLeave={() => setHoveredId(null)}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:translate-y-[-8px] flex flex-col cursor-pointer group"
+                className="bg-[#FBF9F6] rounded-2xl shadow-sm border border-[#e5ddd2] overflow-hidden hover:shadow-[0_18px_40px_rgba(18,33,59,0.14)] transition-all duration-300 transform hover:translate-y-[-8px] flex flex-col cursor-pointer group"
               >
                 {/* Top Section with Icon */}
-                <div className="bg-[#1e3557] p-6 border-b border-gray-200 flex items-start justify-between">
+                <div className="bg-gradient-to-r from-[#1e3557] via-[#224067] to-[#2f5f88] p-6 border-b border-[#d5dfea] flex items-start justify-between">
                   <div>
                     <h2 className="text-2xl font-bold text-white mb-1">
                       {course.title}
                     </h2>
                     <p className="text-sm text-gray-300">{course.level}</p>
                   </div>
-                  <div className="p-3 bg-white rounded-lg">
+                  <div className="p-3 bg-[#FBF9F6] rounded-lg shadow-inner">
                     <IconComponent className="w-7 h-7 text-[#1e3557]" />
                   </div>
                 </div>
 
                 {/* Description */}
                 <div className="px-6 py-4 flex-1">
-                  <p className="text-gray-700 text-sm leading-relaxed mb-4">
+                  <p className="text-slate-700 text-sm leading-relaxed mb-4">
                     {course.description}
                   </p>
 
@@ -150,13 +150,13 @@ export default function CoursesSection() {
                       {course.topics.slice(0, 3).map((topic, idx) => (
                         <span
                           key={idx}
-                          className="inline-block bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-full"
+                          className="inline-block bg-[#efe7db] text-slate-700 text-xs px-3 py-1 rounded-full"
                         >
                           {topic}
                         </span>
                       ))}
                       {course.topics.length > 3 && (
-                        <span className="inline-block bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-full">
+                        <span className="inline-block bg-[#efe7db] text-slate-700 text-xs px-3 py-1 rounded-full">
                           +{course.topics.length - 3} more
                         </span>
                       )}
@@ -165,7 +165,7 @@ export default function CoursesSection() {
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 bg-[#F5F7FA] border-t border-gray-200 flex items-center justify-between">
+                <div className="px-6 py-4 bg-[#f2ece4] border-t border-[#ddd3c6] flex items-center justify-between">
                   <p className="text-sm font-semibold text-gray-800">
                     {course.students}
                   </p>
@@ -173,7 +173,7 @@ export default function CoursesSection() {
                     className={`p-2 rounded-lg transition-all duration-300 ${
                       isHovered
                         ? "bg-[#1e3557] text-white"
-                        : "bg-white text-[#1e3557] border border-[#1e3557]"
+                        : "bg-[#FBF9F6] text-[#1e3557] border border-[#1e3557]"
                     }`}
                   >
                     <ChevronRight className="w-5 h-5" />
@@ -185,11 +185,11 @@ export default function CoursesSection() {
         </div>
 
         {/* CTA Section */}
-        <div className="mt-16 text-center bg-white rounded-xl p-10 border border-gray-200 shadow-sm">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+        <div className="mt-16 text-center bg-[#FBF9F6] rounded-2xl p-10 border border-[#ddd2c4] shadow-sm">
+          <h2 className="text-3xl font-bold text-[#162842] mb-4">
             Ready to Start Learning?
           </h2>
-          <p className="text-gray-700 mb-6 max-w-2xl mx-auto">
+          <p className="text-slate-700 mb-6 max-w-2xl mx-auto">
             Choose any subject and begin your journey towards academic
             excellence with personalized one-on-one sessions.
           </p>

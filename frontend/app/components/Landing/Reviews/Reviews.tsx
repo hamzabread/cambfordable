@@ -65,14 +65,14 @@ export default function StudentsReviews() {
   const marqueeReviews = [...reviews, ...reviews];
 
   return (
-    <div className="bg-[#E8EAEE] py-16 px-4 sm:px-6 lg:px-8 overflow-hidden">
+    <div className="bg-[#13203a] py-18 px-4 sm:px-6 lg:px-8 overflow-hidden border-y border-[#24385d]">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16">
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl sm:text-5xl font-bold text-[#FBF9F6] mb-4">
             What Our Students Say
           </h1>
-          <p className="text-lg text-gray-700 max-w-2xl mx-auto">
+          <p className="text-lg text-slate-300 max-w-2xl mx-auto">
             Join hundreds of satisfied students who have achieved their academic goals
           </p>
         </div>
@@ -83,27 +83,27 @@ export default function StudentsReviews() {
             {marqueeReviews.map((review, idx) => (
               <div
                 key={`${review.id}-${idx}`}
-                className="w-[320px] sm:w-90 bg-[#F5F7FA] rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all duration-300"
+                className="w-[320px] sm:w-90 bg-[#111d34] rounded-2xl p-6 shadow-sm border border-[#263758] hover:shadow-[0_18px_35px_rgba(0,0,0,0.38)] transition-all duration-300"
               >
                 {/* Rating Stars */}
                 <div className="flex gap-1 mb-4">
                   {[...Array(review.rating)].map((_, i) => (
                     <Star
                       key={i}
-                      className="w-4 h-4 fill-gray-800 text-gray-800"
+                      className="w-4 h-4 fill-[#f7c95c] text-[#f7c95c]"
                     />
                   ))}
                 </div>
 
                 {/* Review Text */}
-                <p className="text-gray-700 text-sm leading-relaxed mb-6 min-h-23">
+                <p className="text-slate-100 text-sm leading-relaxed mb-6 min-h-23">
                   "{review.review}"
                 </p>
 
                 {/* Student Info */}
-                <div className="pt-4 border-t border-gray-300">
-                  <p className="font-semibold text-gray-900 text-sm">{review.name}</p>
-                  <p className="text-xs text-gray-600 mt-0.5">{review.subject}</p>
+                <div className="pt-4 border-t border-[#2e4468]">
+                  <p className="font-semibold text-[#FBF9F6] text-sm">{review.name}</p>
+                  <p className="text-xs text-slate-300 mt-0.5">{review.subject}</p>
                 </div>
               </div>
             ))}
