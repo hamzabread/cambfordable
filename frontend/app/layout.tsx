@@ -1,7 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { GeistSans } from 'geist/font/sans';
-import { GeistMono } from 'geist/font/mono';
+import { Space_Grotesk, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
+
+const headingFont = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-heading",
+  weight: ["500", "600", "700"],
+});
+
+const bodyFont = Source_Sans_3({
+  subsets: ["latin"],
+  variable: "--font-body",
+  weight: ["400", "500", "600"],
+});
 
 export const metadata: Metadata = {
   title: "Live Class Platform",
@@ -22,9 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${GeistSans.variable} ${GeistMono.variable} antialiased bg-white`}
-      >
+      <body className={`${headingFont.variable} ${bodyFont.variable} antialiased bg-white`}>
         {children}
       </body>
     </html>

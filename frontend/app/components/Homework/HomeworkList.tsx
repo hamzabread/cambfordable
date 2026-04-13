@@ -146,6 +146,15 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
     return days;
   };
 
+  const getImageUrl = (url?: string | null) => {
+    if (!url) return null;
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+
+    const apiBase = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
+    const normalizedPath = url.startsWith("/") ? url : `/${url}`;
+    return `${apiBase}${normalizedPath}`;
+  };
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -169,7 +178,7 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
     <>
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm flex items-center gap-3 mb-6">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <AlertCircle className="w-5 h-5 shrink-0" />
           <span>{error}</span>
         </div>
       )}
@@ -191,6 +200,7 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
                     const overdue = isOverdue(homework.due_date);
                     const dueToday = isDueToday(homework.due_date);
                     const daysLeft = daysUntilDue(homework.due_date);
+                    const homeworkImageUrl = getImageUrl(homework.image_url);
 
                     return (
                       <div
@@ -207,7 +217,7 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
                   {/* Left Section */}
                   <div className="flex-1">
                     <div className="flex items-start gap-3 mb-3">
-                      <FileText className="w-6 h-6 text-slate-600 flex-shrink-0 mt-1" />
+                      <FileText className="w-6 h-6 text-slate-600 shrink-0 mt-1" />
                       <div>
                         <h3 className="text-lg font-bold text-slate-900">
                           {homework.title}
@@ -223,7 +233,7 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
                     </p>
 
                     {/* Question Image */}
-                    {homework.image_url && (
+                    {homeworkImageUrl && (
                       <div className="mb-4 p-3 bg-slate-100 rounded-lg border border-slate-300">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -232,13 +242,13 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
                           </div>
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => setViewingImage(homework.image_url || null)}
+                              onClick={() => setViewingImage(homeworkImageUrl)}
                               className="text-blue-600 hover:text-blue-700 text-xs font-medium"
                             >
                               View
                             </button>
                             <a
-                              href={homework.image_url}
+                              href={homeworkImageUrl}
                               download
                               className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 text-xs font-medium"
                             >
@@ -248,10 +258,10 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
                           </div>
                         </div>
                         <img
-                          src={homework.image_url}
+                          src={homeworkImageUrl}
                           alt="Homework question"
-                          className="w-full h-auto max-h-[200px] object-contain rounded cursor-pointer"
-                          onClick={() => setViewingImage(homework.image_url || null)}
+                          className="w-full h-auto max-h-50 object-contain rounded cursor-pointer"
+                          onClick={() => setViewingImage(homeworkImageUrl)}
                         />
                       </div>
                     )}
@@ -351,7 +361,7 @@ const HomeworkList = ({ user }: HomeworkListProps) => {
       {/* Image Viewer Modal */}
       {viewingImage && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-70 z-[10000] flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black bg-opacity-70 z-10000 flex items-center justify-center p-4"
           onClick={() => setViewingImage(null)}
         >
           <div

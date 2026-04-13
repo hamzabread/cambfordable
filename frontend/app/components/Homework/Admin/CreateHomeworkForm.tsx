@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { BookOpen, AlertCircle, CheckCircle, Loader, X } from "lucide-react";
-import QuestionImageUpload from "../../QuestionImageUpload";
 
 interface Course {
   id: number;
@@ -37,8 +36,8 @@ const CreateHomeworkForm = ({
     description: "",
     due_date: "",
   });
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [homeworkId, setHomeworkId] = useState<number | null>(null);
+  const [attachedImageFile, setAttachedImageFile] = useState<File | null>(null);
+  const [attachedImagePreview, setAttachedImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -53,6 +52,29 @@ const CreateHomeworkForm = ({
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setAttachedImageFile(null);
+      setAttachedImagePreview(null);
+      return;
+    }
+
+    if (!["image/jpeg", "image/png", "image/jpg"].includes(file.type)) {
+      setError("Only JPG and PNG images are allowed");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Image must be smaller than 10MB");
+      return;
+    }
+
+    setError(null);
+    setAttachedImageFile(file);
+    setAttachedImagePreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -93,21 +115,42 @@ const CreateHomeworkForm = ({
         }
       );
 
+      let createdHomework: Homework = response.data;
+
+      // Upload optional image right after homework is created.
+      if (attachedImageFile) {
+        const imageFormData = new FormData();
+        imageFormData.append("file", attachedImageFile);
+
+        const imageUploadResponse = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_URL}/homeworks/${response.data.id}/image`,
+          imageFormData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+
+        createdHomework = {
+          ...createdHomework,
+          image_url: imageUploadResponse.data.image_url,
+        };
+      }
+
       setSuccess(true);
-      setHomeworkId(response.data.id);
-      setTimeout(() => {
-        onSuccess(response.data);
-        // Reset form
-        setFormData({
-          course_id: "",
-          title: "",
-          description: "",
-          due_date: "",
-        });
-        setImageUrl(null);
-        setHomeworkId(null);
-        setSuccess(false);
-      }, 1500);
+      onSuccess(createdHomework);
+      // Reset form
+      setFormData({
+        course_id: "",
+        title: "",
+        description: "",
+        due_date: "",
+      });
+      setAttachedImageFile(null);
+      setAttachedImagePreview(null);
+      setSuccess(false);
     } catch (err: any) {
       console.error("Error creating homework:", err);
       if (err.response?.data?.detail) {
@@ -142,7 +185,7 @@ const CreateHomeworkForm = ({
       {/* Success Message */}
       {success && (
         <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
-          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+          <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold text-green-900">Success</p>
             <p className="text-green-800 text-sm">
@@ -152,28 +195,10 @@ const CreateHomeworkForm = ({
         </div>
       )}
 
-      {/* Image Upload Section - Show after successful creation */}
-      {homeworkId && (
-        <div className="mb-6 p-6 bg-blue-50 border-2 border-blue-200 rounded-lg space-y-4">
-          <h4 className="font-semibold text-blue-900">📸 Add Question Image (Optional)</h4>
-          <p className="text-sm text-blue-700">
-            Upload an image to visualize the homework question for students
-          </p>
-          <QuestionImageUpload
-            questionId={homeworkId}
-            imageUrl={imageUrl}
-            type="homework"
-            onUploadSuccess={(url) => {
-              setImageUrl(url);
-            }}
-          />
-        </div>
-      )}
-
       {/* Error Message */}
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold text-red-900">Error</p>
             <p className="text-red-800 text-sm">{error}</p>
@@ -250,6 +275,30 @@ const CreateHomeworkForm = ({
             required
             className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition"
           />
+        </div>
+
+        {/* Optional Image */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Question Image (Optional)
+          </label>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/jpg"
+            onChange={handleImageChange}
+            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition"
+          />
+          <p className="text-xs text-slate-500 mt-2">PNG or JPG, up to 10MB</p>
+
+          {attachedImagePreview && (
+            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <img
+                src={attachedImagePreview}
+                alt="Homework image preview"
+                className="w-full max-h-48 object-contain rounded"
+              />
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}

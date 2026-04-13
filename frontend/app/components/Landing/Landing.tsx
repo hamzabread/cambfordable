@@ -1,6 +1,7 @@
 import React from 'react'
 import Header from './Header/Header'
 import Banner from './Banner/Banner'
+import HowItWorks from './HowItWorks/HowItWorks'
 import Teach from './Teach/Teach'
 import Teacher from '@/app/components/Landing/Teacher/teacher'
 import Impact from './Impact/Impact'
@@ -14,6 +15,7 @@ const Landing = () => {
     <main className="bg-[#FBF9F6] text-slate-900">
         <Header />
         <Banner />
+        <HowItWorks />
       
         <Teach />
         <Teacher />
