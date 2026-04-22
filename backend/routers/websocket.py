@@ -12,6 +12,7 @@ from schemas.live_class_messages import LiveChatMessageOut
 from core.redis import redis_client
 import json
 import asyncio
+from json import JSONDecodeError
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
@@ -23,6 +24,29 @@ rate_limit: dict[int, float] = {}
 
 redis_tasks: dict[int, asyncio.Task] = {}
 
+# live_class_id -> active question state (in-memory, phase 1)
+active_questions: dict[int, dict] = {}
+
+
+def build_question_stats(question_state: dict) -> dict:
+    options = question_state["options"]
+    counts = [0] * len(options)
+    for selected in question_state["responses"].values():
+        if 0 <= selected < len(options):
+            counts[selected] += 1
+
+    return {
+        "counts": counts,
+        "total_responses": len(question_state["responses"]),
+    }
+
+
+async def publish_event(live_class_id: int, payload: dict):
+    await redis_client.publish(
+        chat_channel(live_class_id),
+        json.dumps(payload)
+    )
+
 async def redis_listener(live_class_id: int):
     pubsub = redis_client.pubsub()
     await pubsub.subscribe(chat_channel(live_class_id))
@@ -33,18 +57,27 @@ async def redis_listener(live_class_id: int):
                 continue
 
             payload = json.loads(message["data"])
+            event_type = payload.get("event_type", "chat")
+            visibility = payload.get("visibility", "chat_filter")
+            target_user_id = payload.get("target_user_id")
 
             # Broadcast to all connected users, but each client decides what to show
             for conn in active_connections.get(live_class_id, []):
-                # Admins see everything
-                if conn["is_admin"]:
+                # Broadcast event to all connected users
+                if visibility == "all":
                     await conn["ws"].send_json(payload)
-                # Students only see:
-                # 1. Messages from admins (payload["is_admin"] == True)
-                # 2. Their own messages (payload["user_id"] == conn["user_id"])
-                elif payload["is_admin"] or payload["user_id"] == conn["user_id"]:
+                # Broadcast only to admins
+                elif visibility == "admins" and conn["is_admin"]:
                     await conn["ws"].send_json(payload)
-                # Otherwise, don't send the message to this student
+                # Broadcast only to a specific user
+                elif visibility == "user" and target_user_id == conn["user_id"]:
+                    await conn["ws"].send_json(payload)
+                # Backward-compatible chat filtering behavior
+                elif visibility == "chat_filter" and event_type == "chat":
+                    if conn["is_admin"]:
+                        await conn["ws"].send_json(payload)
+                    elif payload.get("is_admin") or payload.get("user_id") == conn["user_id"]:
+                        await conn["ws"].send_json(payload)
 
     finally:
         await pubsub.unsubscribe(chat_channel(live_class_id))
@@ -106,10 +139,176 @@ async def live_class_chat(
         "is_admin": user.is_admin
     })
 
+    # Send active question state to the newly connected user (if any)
+    active_question = active_questions.get(live_class_id)
+    if active_question and active_question.get("is_active"):
+        user_answer = active_question["responses"].get(user.id)
+        await websocket.send_json({
+            "event_type": "question_sync",
+            "question_id": active_question["id"],
+            "question": active_question["question"],
+            "options": active_question["options"],
+            "is_active": True,
+            "user_answer": user_answer,
+        })
+
+        if user.is_admin:
+            stats = build_question_stats(active_question)
+            await websocket.send_json({
+                "event_type": "question_stats",
+                "question_id": active_question["id"],
+                **stats,
+            })
+
 
     try:
         while True:
             data = await websocket.receive_text()
+
+            parsed_data = None
+            try:
+                parsed_data = json.loads(data)
+            except JSONDecodeError:
+                parsed_data = None
+
+            # Handle phase-1 live question events
+            if isinstance(parsed_data, dict) and parsed_data.get("action"):
+                action = parsed_data["action"]
+
+                if action == "question_publish":
+                    if not user.is_admin:
+                        continue
+
+                    question = str(parsed_data.get("question", "")).strip()
+                    options = parsed_data.get("options", [])
+                    correct_option = parsed_data.get("correct_option")
+
+                    if (
+                        not question
+                        or not isinstance(options, list)
+                        or len(options) < 2
+                        or not all(str(opt).strip() for opt in options)
+                    ):
+                        continue
+
+                    try:
+                        correct_option = int(correct_option)
+                    except (TypeError, ValueError):
+                        continue
+
+                    if correct_option < 0 or correct_option >= len(options):
+                        continue
+
+                    question_state = {
+                        "id": int(time() * 1000),
+                        "question": question,
+                        "options": [str(opt).strip() for opt in options],
+                        "correct_option": correct_option,
+                        "responses": {},
+                        "is_active": True,
+                    }
+                    active_questions[live_class_id] = question_state
+
+                    await publish_event(live_class_id, {
+                        "event_type": "question_publish",
+                        "visibility": "all",
+                        "question_id": question_state["id"],
+                        "question": question_state["question"],
+                        "options": question_state["options"],
+                        "is_active": True,
+                    })
+
+                    await publish_event(live_class_id, {
+                        "event_type": "question_stats",
+                        "visibility": "admins",
+                        "question_id": question_state["id"],
+                        "counts": [0] * len(question_state["options"]),
+                        "total_responses": 0,
+                    })
+                    continue
+
+                if action == "question_submit":
+                    if user.is_admin:
+                        continue
+
+                    question_state = active_questions.get(live_class_id)
+                    if not question_state or not question_state.get("is_active"):
+                        continue
+
+                    try:
+                        selected_option = int(parsed_data.get("selected_option"))
+                    except (TypeError, ValueError):
+                        continue
+
+                    if selected_option < 0 or selected_option >= len(question_state["options"]):
+                        continue
+
+                    # One submission per student in phase 1
+                    if user.id in question_state["responses"]:
+                        selected_option = question_state["responses"][user.id]
+                    else:
+                        question_state["responses"][user.id] = selected_option
+
+                    stats = build_question_stats(question_state)
+
+                    await publish_event(live_class_id, {
+                        "event_type": "question_stats",
+                        "visibility": "admins",
+                        "question_id": question_state["id"],
+                        **stats,
+                    })
+
+                    await websocket.send_json({
+                        "event_type": "question_ack",
+                        "question_id": question_state["id"],
+                        "selected_option": selected_option,
+                    })
+                    continue
+
+                if action == "question_end":
+                    if not user.is_admin:
+                        continue
+
+                    question_state = active_questions.get(live_class_id)
+                    if not question_state:
+                        continue
+
+                    stats = build_question_stats(question_state)
+
+                    await publish_event(live_class_id, {
+                        "event_type": "question_end",
+                        "visibility": "all",
+                        "question_id": question_state["id"],
+                        "question": question_state["question"],
+                        "options": question_state["options"],
+                        "correct_option": question_state["correct_option"],
+                        **stats,
+                    })
+
+                    active_questions.pop(live_class_id, None)
+                    continue
+
+                if action == "question_sync_request":
+                    question_state = active_questions.get(live_class_id)
+                    if question_state and question_state.get("is_active"):
+                        user_answer = question_state["responses"].get(user.id)
+                        await websocket.send_json({
+                            "event_type": "question_sync",
+                            "question_id": question_state["id"],
+                            "question": question_state["question"],
+                            "options": question_state["options"],
+                            "is_active": True,
+                            "user_answer": user_answer,
+                        })
+
+                        if user.is_admin:
+                            stats = build_question_stats(question_state)
+                            await websocket.send_json({
+                                "event_type": "question_stats",
+                                "question_id": question_state["id"],
+                                **stats,
+                            })
+                    continue
 
             # ⏱ Rate limiting: 1 msg/sec per user
             now_ts = time()
@@ -128,17 +327,16 @@ async def live_class_chat(
             )
 
             payload = {
+                "event_type": "chat",
+                "visibility": "chat_filter",
                 "id": msg.id,
                 "user_id": user.id,
                 "message": msg.message,
                 "created_at": msg.created_at.isoformat(),
                 "is_admin": user.is_admin,
             }
-            
-            await redis_client.publish(
-                chat_channel(live_class_id),
-                json.dumps(payload)
-            )
+
+            await publish_event(live_class_id, payload)
 
 
 
@@ -150,6 +348,7 @@ async def live_class_chat(
 
         if not active_connections[live_class_id]:
             del active_connections[live_class_id]
+            active_questions.pop(live_class_id, None)
 
             task = redis_tasks.pop(live_class_id, None)
             if task:
