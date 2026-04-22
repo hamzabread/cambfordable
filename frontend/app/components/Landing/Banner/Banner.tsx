@@ -4,7 +4,7 @@ import Image from 'next/image';
 const Banner = () => {
   return (
     <section id='Home' className='bg-[#0c1425] mt-0'>
-      <div className="relative w-full h-[60vh] md:h-[55vh] min-h-[460px] flex flex-col justify-center items-center text-center overflow-hidden">
+      <div className="relative w-full h-[55vh] md:h-[50vh] min-h-[420px] flex flex-col justify-center items-center text-center overflow-hidden">
         {/* Background Image */}
         <Image
           src="/assets/banner/banner.png"
@@ -23,7 +23,7 @@ const Banner = () => {
         <div className="relative z-10 px-4 sm:px-6 md:px-8 lg:px-12 max-w-5xl mx-auto w-full">
           {/* Heading */}
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-tight md:leading-[1.2] mb-4 md:mb-6">
-            Learn O and A-Levels ....
+            Learn O and A-Levels
           </h1>
 
           {/* Subheading */}

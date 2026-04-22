@@ -173,6 +173,17 @@ export default function ZoomProvider({ meetingData }: { meetingData: any }) {
             pointer-events: auto !important; 
             width: 100% !important;
             height: 100% !important;
+            background-color: #104278 !important;
+          }
+
+          #zmmtg-root .meeting-app,
+          #zmmtg-root .meeting-client,
+          #zmmtg-root .meeting-container,
+          #zmmtg-root .main-layout,
+          #zmmtg-root .video-container,
+          #zmmtg-root .share-view-container,
+          #zmmtg-root .screen-share-container {
+            background-color: #104278 !important;
           }
 
           #zmmtg-root .meeting-footer { 

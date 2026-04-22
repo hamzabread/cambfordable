@@ -15,6 +15,7 @@ import {
   Loader,
   ExternalLink,
   CheckCircle,
+  MessageCircle,
   X,
 } from "lucide-react";
 
@@ -36,6 +37,14 @@ interface EnrolledCourse {
   code: string;
 }
 
+interface CreatedLiveClassState {
+  id: number;
+  title: string;
+  courseName: string;
+}
+
+const CREATED_LIVE_CLASS_KEY = "created_live_class_state";
+
 const LiveClassesPage = () => {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -47,6 +56,8 @@ const LiveClassesPage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [filterCourse, setFilterCourse] = useState<number | null>(null);
   const [openAttachmentModal, setOpenAttachmentModal] = useState<number | null>(null);
+  const [savedAdminClass, setSavedAdminClass] = useState<CreatedLiveClassState | null>(null);
+  const [siteOrigin, setSiteOrigin] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -135,8 +146,57 @@ const LiveClassesPage = () => {
     fetchData();
   }, [router]);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setSiteOrigin(window.location.origin);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!user?.is_admin) {
+      setSavedAdminClass(null);
+      return;
+    }
+
+    const savedState = localStorage.getItem(CREATED_LIVE_CLASS_KEY);
+    if (!savedState) {
+      setSavedAdminClass(null);
+      return;
+    }
+
+    try {
+      const parsedState = JSON.parse(savedState) as CreatedLiveClassState;
+      if (parsedState?.id && parsedState?.title && parsedState?.courseName) {
+        setSavedAdminClass(parsedState);
+      }
+    } catch (parseError) {
+      console.error("Error restoring saved admin class:", parseError);
+      localStorage.removeItem(CREATED_LIVE_CLASS_KEY);
+      setSavedAdminClass(null);
+    }
+  }, [user?.is_admin]);
+
   const handleJoinClass = async (classId: number) => {
     window.open(`/meeting/${classId}`, "_blank");
+  };
+
+  const handleShareSavedClass = () => {
+    if (!savedAdminClass || !siteOrigin) return;
+
+    const meetingLink = `${siteOrigin}/meeting/${savedAdminClass.id}`;
+    const message = `Join my live class: ${savedAdminClass.title}\n${meetingLink}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const handleJoinSavedClass = () => {
+    if (!savedAdminClass) return;
+    window.open(`/meeting/${savedAdminClass.id}`, "_blank", "noopener,noreferrer");
+  };
+
+  const handleClearSavedClass = () => {
+    localStorage.removeItem(CREATED_LIVE_CLASS_KEY);
+    setSavedAdminClass(null);
   };
 
   const formatDate = (dateString: string) => {
@@ -188,7 +248,7 @@ const LiveClassesPage = () => {
 
   if (loading) {
     return (
-      <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="flex h-screen bg-linear-to-br from-slate-50 to-slate-100">
         <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="lg:hidden h-14"></div>
@@ -208,7 +268,7 @@ const LiveClassesPage = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="flex h-screen bg-linear-to-br from-slate-50 to-slate-100">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       <div className="flex-1 flex flex-col overflow-hidden relative">
@@ -239,8 +299,59 @@ const LiveClassesPage = () => {
             {/* Error Message */}
             {error && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
                 <p className="text-red-800">{error}</p>
+              </div>
+            )}
+
+            {/* Admin Quick Access Card */}
+            {user?.is_admin && savedAdminClass && (
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 sm:p-6">
+                <div className="flex items-start justify-between gap-4 flex-col sm:flex-row sm:items-center">
+                  <div>
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold mb-3">
+                      Admin quick access
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-900">
+                      {savedAdminClass.title}
+                    </h2>
+                    <p className="text-sm text-slate-600 mt-1">
+                      {savedAdminClass.courseName}
+                    </p>
+                    {siteOrigin && (
+                      <p className="text-xs text-slate-500 mt-2 break-all">
+                        {siteOrigin}/meeting/{savedAdminClass.id}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={handleShareSavedClass}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Share on WhatsApp
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleJoinSavedClass}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white font-semibold hover:bg-slate-800 transition"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Join Class
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClearSavedClass}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition"
+                    >
+                      <X className="w-4 h-4" />
+                      Clear
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -289,7 +400,7 @@ const LiveClassesPage = () => {
                   {liveNowClasses.map((liveClass) => (
                     <div
                       key={liveClass.id}
-                      className="bg-gradient-to-br from-red-50 to-orange-50 rounded-lg shadow-md border border-red-200 p-6 hover:shadow-lg transition"
+                      className="bg-linear-to-br from-red-50 to-orange-50 rounded-lg shadow-md border border-red-200 p-6 hover:shadow-lg transition"
                     >
                       {/* Live Badge */}
                       <div className="flex items-center gap-2 mb-4">
@@ -328,7 +439,7 @@ const LiveClassesPage = () => {
                       <button
                         onClick={() => handleJoinClass(liveClass.id)}
                         disabled={joiningId === liveClass.id}
-                        className="w-full px-4 py-3 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 disabled:opacity-70 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
+                        className="w-full px-4 py-3 bg-linear-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 disabled:opacity-70 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
                       >
                         {joiningId === liveClass.id ? (
                           <>
@@ -469,7 +580,7 @@ const LiveClassesPage = () => {
 
             {/* Modal Overlay for Active Attachment Upload */}
             {openAttachmentModal !== null && (
-              <div className="fixed inset-0 bg-black/70 z-[9999]"></div>
+              <div className="fixed inset-0 bg-black/70 z-9999"></div>
             )}
 
             {/* No Classes Message */}
