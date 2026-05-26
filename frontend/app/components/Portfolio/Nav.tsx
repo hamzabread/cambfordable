@@ -116,7 +116,8 @@ export default function Nav() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.16 }}
-            className="fixed top-20 left-4 right-4 z-50 md:hidden glass rounded-2xl p-4"
+            className="fixed top-20 left-4 right-4 z-50 md:hidden rounded-2xl p-4"
+            style={{ backgroundColor: "rgba(0, 0, 0, 0.9)" }}
           >
             {links.map((l) => (
               <a key={l.id} href={`#${l.id}`} onClick={() => setOpen(false)}

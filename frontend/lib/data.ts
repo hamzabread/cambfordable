@@ -4,7 +4,7 @@ export const profile = {
 	tagline: "Backend-leaning full-stack engineer building scalable web, IoT and AI products.",
 	location: "Islamabad, Pakistan",
 	email: "hamzaval2000@gmail.com",
-	phone: "+92 321 554608",
+	phone: "+92 321 5554608",
 	github: "https://github.com/hamzabread",
 	linkedin: "https://www.linkedin.com/in/hamza-elahi",
 	resumeUrl: "/Hamza-Elahi-Resume.pdf",
