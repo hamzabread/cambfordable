@@ -6,11 +6,14 @@ import { useParams, useRouter } from "next/navigation";
 import ZoomProvider from "../../components/ZoomProvider"; // Adjust path as needed
 import { Loader } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default function MeetingPage() {
   const params = useParams();
   const router = useRouter();
   const [meetingData, setMeetingData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const classId = Number(params.id);
 
   useEffect(() => {
     const fetchMeetingCredentials = async () => {
@@ -37,6 +40,16 @@ export default function MeetingPage() {
     }
   }, [params.id, router]);
 
+  if (Number.isNaN(classId)) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-slate-900 text-white p-4">
+        <div className="text-center">
+          <p className="text-xl mb-4">Invalid class ID.</p>
+        </div>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="h-screen flex items-center justify-center bg-slate-900 text-white p-4">
@@ -60,7 +73,7 @@ export default function MeetingPage() {
   return (
     <div className="fixed inset-0 bg-black">
         {/* We reuse your existing ZoomProvider component */}
-      <ZoomProvider meetingData={meetingData} />
+      <ZoomProvider meetingData={meetingData} classId={classId} />
     </div>
   );
 }
