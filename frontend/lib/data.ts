@@ -186,4 +186,3 @@ export const stats = [
 	{ value: "92%", label: "CV detection accuracy (Smart Attendance)" },
 	{ value: "30%", label: "Frontend perf gain at Quecko" },
 ];
-export * from "../../lib/data";
