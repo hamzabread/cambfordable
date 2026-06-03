@@ -5,7 +5,13 @@ from models.users import User
 from schemas.courses import CourseOut, EnrolledCourseBase
 from core.whatsapp import whatsapp_service
 
-def create_enrollment(db: Session, user: User, course_id: int):
+def create_enrollment(
+    db: Session,
+    user: User,
+    course_id: int,
+    payment_proof_url: str | None = None,
+    payment_proof_name: str | None = None,
+):
     # check if enrollment already exists
     enrollment = db.query(Enrollment).filter(
         Enrollment.user_id == user.id,
@@ -19,6 +25,8 @@ def create_enrollment(db: Session, user: User, course_id: int):
     enrollment = Enrollment(
         user_id=user.id,
         course_id=course_id,
+        payment_proof_url=payment_proof_url,
+        payment_proof_name=payment_proof_name,
     )
     db.add(enrollment)
     db.commit()

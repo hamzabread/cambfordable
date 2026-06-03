@@ -41,6 +41,10 @@ const CoursesPage = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [paymentFile, setPaymentFile] = useState<File | null>(null);
+  const [uploadingPayment, setUploadingPayment] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -106,32 +110,50 @@ const CoursesPage = () => {
       return;
     }
 
+    const courseToEnroll = availableCourses.find((c) => c.id === courseId) || null;
+    setSelectedCourse(courseToEnroll);
+    setPaymentFile(null);
+    setPaymentModalOpen(true);
+  };
+
+  const handlePaymentEnroll = async () => {
+    if (!selectedCourse || !paymentFile) {
+      setError("Please upload the payment proof to continue.");
+      return;
+    }
+
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+
     try {
-      setEnrollingId(courseId);
+      setUploadingPayment(true);
+      const formData = new FormData();
+      formData.append("file", paymentFile);
+
       await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}/enroll`,
-        {},
+        `${process.env.NEXT_PUBLIC_API_URL}/courses/${selectedCourse.id}/enroll-with-proof`,
+        formData,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
         }
       );
 
-      // Move course from available to enrolled
-      const courseToEnroll = availableCourses.find((c) => c.id === courseId);
-      if (courseToEnroll) {
-        setEnrolledCourses([...enrolledCourses, courseToEnroll]);
-        setAvailableCourses(
-          availableCourses.filter((c) => c.id !== courseId)
-        );
-        setSuccess(`Successfully enrolled in ${courseToEnroll.name}!`);
-        setTimeout(() => setSuccess(null), 3000);
-      }
+      setEnrolledCourses([...enrolledCourses, selectedCourse]);
+      setAvailableCourses(availableCourses.filter((c) => c.id !== selectedCourse.id));
+      setSuccess(`Successfully enrolled in ${selectedCourse.name}!`);
+      setTimeout(() => setSuccess(null), 3000);
+      setPaymentModalOpen(false);
     } catch (err: any) {
       console.error("Error enrolling in course:", err);
-      setError(
-        err.response?.data?.detail || "Failed to enroll in course. Try again."
-      );
+      setError(err.response?.data?.detail || "Failed to enroll in course. Try again.");
     } finally {
+      setUploadingPayment(false);
       setEnrollingId(null);
     }
   };
@@ -290,6 +312,55 @@ const CoursesPage = () => {
                       key={course.id}
                       className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 hover:shadow-md transition group"
                     >
+
+              {paymentModalOpen && selectedCourse && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+                  <div className="bg-white w-full max-w-lg rounded-xl shadow-lg border border-slate-200 p-6">
+                    <h3 className="text-xl font-bold text-slate-900 mb-2">
+                      Complete Enrollment Payment
+                    </h3>
+                    <p className="text-sm text-slate-600 mb-4">
+                      Please pay 2000 PKR to the account below and upload the payment proof to enroll in {selectedCourse.name}.
+                    </p>
+
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm text-slate-700 mb-4">
+                      <div className="font-semibold text-slate-900">Account name: Ali Imran</div>
+                      <div>Account no: 12345678</div>
+                      <div className="mt-2 text-slate-800 font-semibold">Amount: 2000 PKR</div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="block text-sm font-semibold text-slate-900">
+                        Upload payment proof
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(e) => setPaymentFile(e.target.files?.[0] ?? null)}
+                        className="w-full text-sm"
+                      />
+                    </div>
+
+                    <div className="mt-6 flex items-center justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setPaymentModalOpen(false)}
+                        className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handlePaymentEnroll}
+                        disabled={uploadingPayment}
+                        className="px-4 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-60"
+                      >
+                        {uploadingPayment ? "Uploading..." : "Upload & Enroll"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
                       {/* Course Header */}
                       <div className="mb-4">
                         <h3 className="text-lg font-bold text-slate-900 group-hover:text-slate-700 transition">

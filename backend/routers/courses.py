@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -11,6 +11,7 @@ from crud.enrollments import (
 )
 from schemas.courses import CourseOut, EnrolledCourseBase
 from crud.courses import get_all_courses, create_course
+from routers.uploads import PAYMENT_UPLOAD_DIR, save_file
 
 
 router = APIRouter(prefix="/courses", tags=["Courses"])
@@ -27,6 +28,34 @@ def enroll_course(
         raise HTTPException(status_code=404, detail="Course not found")
 
     return {"message": "Enrolled successfully"}
+
+
+@router.post("/{course_id}/enroll-with-proof")
+async def enroll_course_with_proof(
+    course_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Save payment proof file
+    file_path = save_file(file, PAYMENT_UPLOAD_DIR)
+    formatted_path = f"/{file_path}"
+
+    enrollment = create_enrollment(
+        db,
+        current_user,
+        course_id,
+        payment_proof_url=formatted_path,
+        payment_proof_name=file.filename,
+    )
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    return {
+        "message": "Enrolled successfully",
+        "payment_proof_url": formatted_path,
+        "payment_proof_name": file.filename,
+    }
 
 
 @router.get("/me", response_model=list[EnrolledCourseBase])

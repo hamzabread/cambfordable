@@ -15,6 +15,7 @@ HOMEWORK_IMAGES_DIR = "uploads/homework_images"
 QUIZ_IMAGES_DIR = "uploads/quiz_images"
 LIVE_CLASSES_UPLOAD_DIR = "uploads/live_classes"
 SOLUTIONS_UPLOAD_DIR = "uploads/solutions"
+PAYMENT_UPLOAD_DIR = "uploads/payments"
 
 # Ensure directories exist
 os.makedirs(QUIZ_UPLOAD_DIR, exist_ok=True)
@@ -23,6 +24,7 @@ os.makedirs(HOMEWORK_IMAGES_DIR, exist_ok=True)
 os.makedirs(QUIZ_IMAGES_DIR, exist_ok=True)
 os.makedirs(LIVE_CLASSES_UPLOAD_DIR, exist_ok=True)
 os.makedirs(SOLUTIONS_UPLOAD_DIR, exist_ok=True)
+os.makedirs(PAYMENT_UPLOAD_DIR, exist_ok=True)
 
 
 def _guess_media_type(filename: str) -> str:
@@ -128,6 +130,21 @@ def download_live_class_attachment(filename: str, mode: str = Query("download"))
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Attachment not found")
         
+    return serve_file(file_path, filename, mode)
+
+# --- PAYMENT PROOF ENDPOINTS ---
+
+@router.post("/payments")
+def upload_payment_proof(file: UploadFile = File(...), user = Depends(get_current_user)):
+    path = save_file(file, PAYMENT_UPLOAD_DIR)
+    return {"file_url": f"/{path}", "original_filename": file.filename}
+
+
+@router.get("/payments/{filename}")
+def download_payment_proof(filename: str, mode: str = Query("view")):
+    file_path = os.path.join(PAYMENT_UPLOAD_DIR, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Payment proof not found")
     return serve_file(file_path, filename, mode)
 
 # --- SOLUTIONS ENDPOINTS ---

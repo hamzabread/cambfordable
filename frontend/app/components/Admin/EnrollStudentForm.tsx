@@ -10,6 +10,7 @@ interface User {
   full_name: string;
   email: string;
   is_admin: boolean;
+  payment?: boolean;
 }
 
 interface Course {

@@ -6,13 +6,14 @@ import CreateCourseForm from "../Admin/CreateCourseForm";
 import CreateLiveClassForm from "../Admin/CreateLiveClassForm";
 import EnrollStudentForm from "../Admin/EnrollStudentForm";
 import ManageAdminTA from "../Admin/ManageAdminTA";
+import ManagePayments from "../Admin/ManagePayments";
 
 interface AdminPanelProps {
   isAdmin: boolean;
 }
 
 const AdminPanel = ({ isAdmin }: AdminPanelProps) => {
-  const [activeTab, setActiveTab] = useState<"courses" | "classes" | "enroll" | "manage-admin-ta">("courses");
+  const [activeTab, setActiveTab] = useState<"courses" | "classes" | "enroll" | "manage-admin-ta" | "payments">("courses");
 
   if (!isAdmin) {
     return null;
@@ -79,14 +80,26 @@ const AdminPanel = ({ isAdmin }: AdminPanelProps) => {
           <Shield className="w-5 h-5" />
           Manage Admin/TA
         </button>
+        <button
+          onClick={() => setActiveTab("payments")}
+          className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition whitespace-nowrap ${
+            activeTab === "payments"
+              ? "border-slate-900 text-slate-900"
+              : "border-transparent text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          <Users className="w-5 h-5" />
+          Payments
+        </button>
       </div>
 
       {/* Content Grid */}
-      {activeTab === "enroll" || activeTab === "manage-admin-ta" ? (
+      {activeTab === "enroll" || activeTab === "manage-admin-ta" || activeTab === "payments" ? (
         // Full width layout for enroll and manage-admin-ta (they have guidelines at the bottom)
         <div>
           {activeTab === "enroll" && <EnrollStudentForm />}
           {activeTab === "manage-admin-ta" && <ManageAdminTA />}
+          {activeTab === "payments" && <ManagePayments />}
         </div>
       ) : (
         // Two column layout for courses and classes

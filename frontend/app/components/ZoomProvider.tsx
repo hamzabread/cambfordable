@@ -32,8 +32,11 @@ export default function ZoomProvider({
   meetingData: any;
   classId: number;
 }) {
+  const deviceIdRef = useRef<string>("");
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const router = useRouter();
 
   const meetingSDKElement = useRef<HTMLDivElement>(null);
@@ -44,6 +47,10 @@ export default function ZoomProvider({
   const [questionStats, setQuestionStats] = useState<QuestionStats | null>(null);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [answerFeedback, setAnswerFeedback] = useState<{
+    isCorrect: boolean;
+    correctOption: number;
+  } | null>(null);
   const [endedResult, setEndedResult] = useState<EndedQuestionResult | null>(null);
   const [studentAnswerOpen, setStudentAnswerOpen] = useState(true);
 
@@ -54,6 +61,27 @@ export default function ZoomProvider({
   const [panelPosition, setPanelPosition] = useState({ x: 16, y: 16 });
   const [isDraggingPanel, setIsDraggingPanel] = useState(false);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const storageKey = "zoom_device_id";
+    const existing = window.localStorage.getItem(storageKey);
+    if (existing) {
+      deviceIdRef.current = existing;
+      return;
+    }
+
+    const fallbackId = `device_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    const newId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : fallbackId;
+    window.localStorage.setItem(storageKey, newId);
+    deviceIdRef.current = newId;
+  }, []);
 
   // 1. Fetch Auth State to determine isAdmin
   useEffect(() => {
@@ -121,6 +149,7 @@ export default function ZoomProvider({
           setQuestionStats(null);
           setEndedResult(null);
           setStudentAnswerOpen(true);
+          setAnswerFeedback(null);
 
           if (typeof payload.user_answer === "number") {
             setSelectedOption(payload.user_answer);
@@ -144,6 +173,12 @@ export default function ZoomProvider({
         if (eventType === "question_ack") {
           setSelectedOption(payload.selected_option);
           setHasSubmitted(true);
+          if (typeof payload.is_correct === "boolean") {
+            setAnswerFeedback({
+              isCorrect: payload.is_correct,
+              correctOption: payload.correct_option,
+            });
+          }
           return;
         }
 
@@ -160,6 +195,7 @@ export default function ZoomProvider({
           setSelectedOption(null);
           setHasSubmitted(false);
           setStudentAnswerOpen(false);
+          setAnswerFeedback(null);
         }
       } catch (err) {
         // Ignore non-JSON payloads and unrelated events.
@@ -171,6 +207,73 @@ export default function ZoomProvider({
         wsRef.current.close();
         wsRef.current = null;
       }
+    };
+  }, [classId, loading, user]);
+
+  useEffect(() => {
+    if (loading || !user || !classId) {
+      return;
+    }
+
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      return;
+    }
+
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || window.location.origin;
+    let heartbeatId: ReturnType<typeof setInterval> | null = null;
+    let canceled = false;
+
+    const claimSession = async () => {
+      try {
+        await axios.post(
+          `${apiBase}/live-classes/${classId}/session/claim`,
+          { device_id: deviceIdRef.current },
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (canceled) return;
+        setSessionReady(true);
+        setSessionError(null);
+
+        heartbeatId = setInterval(async () => {
+          try {
+            await axios.post(
+              `${apiBase}/live-classes/${classId}/session/heartbeat`,
+              { device_id: deviceIdRef.current },
+              { headers: { Authorization: `Bearer ${token}` } },
+            );
+          } catch (err) {
+            setSessionReady(false);
+            setSessionError("Your session is active on another device.");
+          }
+        }, 30000);
+      } catch (err: any) {
+        if (canceled) return;
+        const message =
+          err?.response?.status === 409
+            ? "Your account is already active on another device."
+            : "Unable to verify your session. Please try again.";
+        setSessionReady(false);
+        setSessionError(message);
+      }
+    };
+
+    claimSession();
+
+    return () => {
+      canceled = true;
+      if (heartbeatId) {
+        clearInterval(heartbeatId);
+      }
+      axios.delete(
+        `${apiBase}/live-classes/${classId}/session/release`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          data: { device_id: deviceIdRef.current },
+        },
+      ).catch(() => {
+        // Best effort cleanup.
+      });
     };
   }, [classId, loading, user]);
 
@@ -211,15 +314,20 @@ export default function ZoomProvider({
     setAdminCorrectOption(0);
   };
 
-  const handleSubmitAnswer = (optionIndex: number) => {
-    if (hasSubmitted || !activeQuestion) {
+  const handleSelectOption = (optionIndex: number) => {
+    if (hasSubmitted) {
       return;
     }
-
     setSelectedOption(optionIndex);
+  };
+
+  const handleSubmitAnswer = () => {
+    if (hasSubmitted || !activeQuestion || selectedOption === null) {
+      return;
+    }
     sendSocketEvent({
       action: "question_submit",
-      selected_option: optionIndex,
+      selected_option: selectedOption,
     });
   };
 
@@ -278,7 +386,9 @@ export default function ZoomProvider({
       !user ||
       !meetingData?.signature ||
       !meetingSDKElement.current ||
-      zoomGlobalLock
+      zoomGlobalLock ||
+      !sessionReady ||
+      sessionError
     )
       return;
 
@@ -390,6 +500,19 @@ export default function ZoomProvider({
         Loading Class...
       </div>
     );
+
+  if (sessionError) {
+    return (
+      <div className="bg-black h-screen w-screen flex items-center justify-center text-white p-6 text-center">
+        <div>
+          <p className="text-lg font-semibold">{sessionError}</p>
+          <p className="mt-2 text-sm text-white/70">
+            Please close this tab or sign out on the other device.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black w-screen h-screen overflow-hidden">
@@ -584,6 +707,14 @@ export default function ZoomProvider({
           #zmmtg-root .footer-button__leave {
             pointer-events: auto !important;
           }
+
+          .css-1000dfy {
+            padding: 0 20px !important;
+          }
+
+          .css-1lt6p2g {
+            max-width: 95vw !important;
+          }
         `,
         }}
       />
@@ -727,7 +858,7 @@ export default function ZoomProvider({
                         key={index}
                         type="button"
                         disabled={hasSubmitted}
-                        onClick={() => handleSubmitAnswer(index)}
+                        onClick={() => handleSelectOption(index)}
                         className={`text-left px-3 py-2 rounded-lg border transition ${
                           isSelected
                             ? "bg-[#104278] text-white border-[#104278]"
@@ -738,6 +869,25 @@ export default function ZoomProvider({
                       </button>
                     );
                   })}
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={handleSubmitAnswer}
+                    disabled={hasSubmitted || selectedOption === null}
+                    className="px-4 py-2 rounded-lg bg-[#104278] text-white font-semibold hover:opacity-90 disabled:opacity-60"
+                  >
+                    Submit Answer
+                  </button>
+
+                  {answerFeedback && (
+                    <p className={`text-sm font-semibold ${answerFeedback.isCorrect ? "text-green-700" : "text-red-600"}`}>
+                      {answerFeedback.isCorrect
+                        ? "Correct answer"
+                        : `Wrong answer. Correct: ${answerFeedback.correctOption + 1}`}
+                    </p>
+                  )}
                 </div>
 
                 {hasSubmitted && (

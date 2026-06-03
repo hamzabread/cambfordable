@@ -262,6 +262,8 @@ async def live_class_chat(
                         "event_type": "question_ack",
                         "question_id": question_state["id"],
                         "selected_option": selected_option,
+                        "is_correct": selected_option == question_state["correct_option"],
+                        "correct_option": question_state["correct_option"],
                     })
                     continue
 

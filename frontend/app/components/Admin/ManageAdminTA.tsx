@@ -11,6 +11,7 @@ interface User {
   email: string;
   is_admin: boolean;
   is_ta: boolean;
+  payment?: boolean;
 }
 
 interface Course {
@@ -24,6 +25,7 @@ const ManageAdminTA = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [paymentUpdating, setPaymentUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -120,6 +122,38 @@ const ManageAdminTA = () => {
     }
   };
 
+  const handleTogglePayment = async () => {
+    if (!selectedUser) {
+      return;
+    }
+
+    setPaymentUpdating(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const nextPayment = !selectedUser.payment;
+
+      await axios.patch(
+        `${process.env.NEXT_PUBLIC_API_URL}/users/${selectedUser.id}/payment`,
+        { payment: nextPayment },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setSelectedUser({ ...selectedUser, payment: nextPayment });
+      setUsers((prev) =>
+        prev.map((u) => (u.id === selectedUser.id ? { ...u, payment: nextPayment } : u))
+      );
+
+      setSuccess(
+        `✅ ${selectedUser.full_name} payment marked as ${nextPayment ? "paid" : "unpaid"}`
+      );
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Failed to update payment status");
+    } finally {
+      setPaymentUpdating(false);
+    }
+  };
+
   const filteredUsers = users.filter(
     (u) =>
       u.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -204,6 +238,33 @@ const ManageAdminTA = () => {
       {/* Role and Course Selection */}
       {selectedUser && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 md:col-span-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <label className="block text-sm font-bold text-slate-900">💳 Payment Status</label>
+                <p className="text-xs text-slate-500 mt-1">
+                  Toggle whether this user is marked as paid.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleTogglePayment}
+                disabled={paymentUpdating}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition text-sm font-semibold ${
+                  selectedUser.payment
+                    ? "border-emerald-600 text-emerald-700 bg-emerald-50"
+                    : "border-amber-500 text-amber-700 bg-amber-50"
+                } ${paymentUpdating ? "opacity-60 cursor-not-allowed" : "hover:opacity-90"}`}
+              >
+                {paymentUpdating
+                  ? "Updating..."
+                  : selectedUser.payment
+                  ? "Mark as unpaid"
+                  : "Mark as paid"}
+              </button>
+            </div>
+          </div>
+
           {/* Role Selection */}
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
             <label className="block text-sm font-bold text-slate-900 mb-4">

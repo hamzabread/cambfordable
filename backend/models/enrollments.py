@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, UniqueConstraint
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, UniqueConstraint, Boolean, String
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -14,6 +14,9 @@ class Enrollment(Base):
 
     progress = Column(Integer, default=0)
     completed = Column(Integer, default=0)
+    paid = Column(Boolean, default=False, nullable=False)
+    payment_proof_url = Column(String, nullable=True)
+    payment_proof_name = Column(String, nullable=True)
     enrolled_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="enrollments")

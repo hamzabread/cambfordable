@@ -41,3 +41,15 @@ class LiveClassOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class LiveClassSessionClaim(BaseModel):
+    device_id: str
+
+
+class LiveClassSessionStatus(BaseModel):
+    active: bool
+    detail: str
+
+    class Config:
+        from_attributes = True
