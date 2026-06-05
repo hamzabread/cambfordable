@@ -7,6 +7,8 @@ import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import Header from "../components/Landing/Header/Header";
 
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
+
 const LoginPage = () => {
   const router = useRouter();
   const [formData, setFormData] = useState({ username: "", password: "" });
@@ -29,7 +31,7 @@ const LoginPage = () => {
       data.append("password", formData.password);
 
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
+        `${API_BASE_URL}/auth/login`,
         data,
         { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
       );

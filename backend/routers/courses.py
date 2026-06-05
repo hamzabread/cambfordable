@@ -9,6 +9,7 @@ from crud.enrollments import (
     get_user_enrollments,
     get_user_courses_with_progress,
 )
+from crud.enrollments import admin_enroll_user
 from schemas.courses import CourseOut, EnrolledCourseBase
 from crud.courses import get_all_courses, create_course
 from routers.uploads import PAYMENT_UPLOAD_DIR, save_file
@@ -52,7 +53,7 @@ async def enroll_course_with_proof(
         raise HTTPException(status_code=404, detail="Course not found")
 
     return {
-        "message": "Enrolled successfully",
+        "message": "Payment proof submitted; pending admin approval",
         "payment_proof_url": formatted_path,
         "payment_proof_name": file.filename,
     }
@@ -80,8 +81,8 @@ def admin_create_course(
     # Create the course
     course = create_course(db, course_in)
     
-    # Auto-enroll the admin in the course
-    create_enrollment(db, admin_user, course.id)
+    # Auto-enroll the admin in the course (mark as paid)
+    admin_enroll_user(db, user_id=admin_user.id, course_id=course.id, paid=True)
     
     return course
 

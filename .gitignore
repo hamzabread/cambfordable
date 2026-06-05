@@ -54,6 +54,7 @@ config.py
 env.py
 
 venv/
+.venv/
 
 *.db
 *.sqlite3

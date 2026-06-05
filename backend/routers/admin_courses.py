@@ -8,6 +8,8 @@ from schemas.enrollments import AdminEnrollRequest, AdminPaymentRequest, Enrollm
 from crud.enrollments import admin_enroll_user
 from models.users import User
 from models.enrollments import Enrollment
+from datetime import datetime
+from core.whatsapp import whatsapp_service
 
 router = APIRouter(
     prefix="/admin/courses",
@@ -101,6 +103,21 @@ def admin_update_payment_status(
         raise HTTPException(status_code=404, detail="Enrollment not found")
 
     enrollment.paid = payload.paid
+    # If marking as paid now, set enrolled_at and send welcome message
+    if payload.paid:
+        enrollment.enrolled_at = datetime.utcnow()
+        # send whatsapp welcome if user has phone and course has invite link
+        try:
+            course = db.query(Enrollment).filter(Enrollment.id == enrollment.id).first().course
+            if enrollment.user and enrollment.user.phone_number:
+                whatsapp_service.send_welcome_message(
+                    phone_number=enrollment.user.phone_number,
+                    course_name=course.name,
+                    invite_link=course.whatsapp_invite_link,
+                )
+        except Exception:
+            pass
+
     db.commit()
     db.refresh(enrollment)
 

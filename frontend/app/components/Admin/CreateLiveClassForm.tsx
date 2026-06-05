@@ -2,14 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import {
-  Video,
-  AlertCircle,
-  CheckCircle,
-  Loader,
-  MessageCircle,
-  ExternalLink,
-} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Video, AlertCircle, CheckCircle, Loader, MessageCircle } from "lucide-react";
 
 interface Course {
   id: number;
@@ -17,15 +11,13 @@ interface Course {
   code: string;
 }
 
-interface CreatedLiveClassState {
+interface CreatedClassInfo {
   id: number;
   title: string;
-  courseName: string;
 }
 
-const CREATED_LIVE_CLASS_KEY = "created_live_class_state";
-
 const CreateLiveClassForm = () => {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     course_id: "",
     title: "",
@@ -38,9 +30,7 @@ const CreateLiveClassForm = () => {
   const [fetchingCourses, setFetchingCourses] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [createdClassId, setCreatedClassId] = useState<number | null>(null);
-  const [createdClassTitle, setCreatedClassTitle] = useState<string>("");
-  const [createdCourseName, setCreatedCourseName] = useState<string>("");
+  const [createdClass, setCreatedClass] = useState<CreatedClassInfo | null>(null);
 
   // Fetch courses on mount
   useEffect(() => {
@@ -67,24 +57,6 @@ const CreateLiveClassForm = () => {
     fetchCourses();
   }, []);
 
-  useEffect(() => {
-    const savedState = localStorage.getItem(CREATED_LIVE_CLASS_KEY);
-    if (!savedState) return;
-
-    try {
-      const parsedState = JSON.parse(savedState) as CreatedLiveClassState;
-      if (parsedState?.id && parsedState?.title && parsedState?.courseName) {
-        setCreatedClassId(parsedState.id);
-        setCreatedClassTitle(parsedState.title);
-        setCreatedCourseName(parsedState.courseName);
-        setSuccess(`Live class "${parsedState.title}" created for ${parsedState.courseName}.`);
-      }
-    } catch (parseError) {
-      console.error("Error restoring created live class state:", parseError);
-      localStorage.removeItem(CREATED_LIVE_CLASS_KEY);
-    }
-  }, []);
-
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -99,8 +71,7 @@ const CreateLiveClassForm = () => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
-    setCreatedClassId(null);
-    setCreatedClassTitle("");
+    setCreatedClass(null);
 
     // Validation
     if (
@@ -138,22 +109,14 @@ const CreateLiveClassForm = () => {
         }
       );
 
-      const courseName =
-        courses.find((c) => c.id === Number(formData.course_id))?.name ||
-        "Course";
-
-      setCreatedClassId(response.data.id);
-      setCreatedClassTitle(formData.title);
-      setCreatedCourseName(courseName);
-      setSuccess(`Live class "${formData.title}" created for ${courseName}.`);
-      localStorage.setItem(
-        CREATED_LIVE_CLASS_KEY,
-        JSON.stringify({
-          id: response.data.id,
-          title: formData.title,
-          courseName,
-        } satisfies CreatedLiveClassState)
+      setSuccess(
+        `Live class "${formData.title}" created successfully. Choose an action below.`
       );
+
+      setCreatedClass({
+        id: response.data.id,
+        title: response.data.title || formData.title,
+      });
 
       // Reset form
       setFormData({
@@ -162,6 +125,7 @@ const CreateLiveClassForm = () => {
         starts_at: "",
         duration: "60",
       });
+
     } catch (err: any) {
       console.error("Error creating live class:", err);
       if (err.response?.data?.detail) {
@@ -176,29 +140,18 @@ const CreateLiveClassForm = () => {
     }
   };
 
-  const meetingLink = createdClassId
-    ? `${window.location.origin}/meeting/${createdClassId}`
-    : "";
-
-  const clearCreatedClassState = () => {
-    setCreatedClassId(null);
-    setCreatedClassTitle("");
-    setCreatedCourseName("");
-    setSuccess(null);
-    localStorage.removeItem(CREATED_LIVE_CLASS_KEY);
+  const handleJoinClass = () => {
+    if (!createdClass) return;
+    router.push(`/meeting/${createdClass.id}`);
   };
 
   const handleShareOnWhatsApp = () => {
-    if (!meetingLink) return;
+    if (!createdClass) return;
 
-    const message = `Join my live class: ${createdClassTitle}\n${meetingLink}`;
+    const meetingPageUrl = `${window.location.origin}/meeting/${createdClass.id}`;
+    const message = `Join live class: ${createdClass.title}\n${meetingPageUrl}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-  };
-
-  const handleJoinMeeting = () => {
-    if (!createdClassId) return;
-    window.open(`/meeting/${createdClassId}`, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -213,7 +166,7 @@ const CreateLiveClassForm = () => {
       {/* Error Message */}
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold text-red-900">Error</p>
             <p className="text-red-800 text-sm">{error}</p>
@@ -224,44 +177,36 @@ const CreateLiveClassForm = () => {
       {/* Success Message */}
       {success && (
         <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
-          <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold text-green-900">Success</p>
             <p className="text-green-800 text-sm">{success}</p>
-            {meetingLink && (
-              <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                <button
-                  type="button"
-                  onClick={handleShareOnWhatsApp}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  Share on WhatsApp
-                </button>
-                <button
-                  type="button"
-                  onClick={handleJoinMeeting}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white font-semibold hover:bg-slate-800 transition"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Join Class
-                </button>
-              </div>
-            )}
-            {meetingLink && (
-              <p className="text-xs text-green-700 mt-3 break-all">
-                Meeting link: {meetingLink}
-              </p>
-            )}
-            {meetingLink && (
-              <button
-                type="button"
-                onClick={clearCreatedClassState}
-                className="mt-3 text-xs font-medium text-green-700 hover:text-green-800 underline"
-              >
-                Clear saved class card
-              </button>
-            )}
+          </div>
+        </div>
+      )}
+
+      {/* Post-create actions */}
+      {createdClass && (
+        <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+          <p className="text-sm text-slate-700 mb-3">
+            Live class created. What would you like to do next?
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              type="button"
+              onClick={handleJoinClass}
+              className="flex-1 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg transition font-medium"
+            >
+              Join Class
+            </button>
+            <button
+              type="button"
+              onClick={handleShareOnWhatsApp}
+              className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition font-medium flex items-center justify-center gap-2"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Share on WhatsApp
+            </button>
           </div>
         </div>
       )}
@@ -360,7 +305,7 @@ const CreateLiveClassForm = () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full px-4 py-3 bg-linear-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 disabled:opacity-70 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition flex items-center justify-center gap-2 mt-6"
+          className="w-full px-4 py-3 bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 disabled:opacity-70 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition flex items-center justify-center gap-2 mt-6"
         >
           {loading ? (
             <>

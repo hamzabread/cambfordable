@@ -32,14 +32,8 @@ def create_enrollment(
     db.commit()
     db.refresh(enrollment)
     
-    # Send WhatsApp welcome message with group invite link
-    course = db.query(Course).filter(Course.id == course_id).first()
-    if course and user.phone_number:
-        whatsapp_service.send_welcome_message(
-            phone_number=user.phone_number,
-            course_name=course.name,
-            invite_link=course.whatsapp_invite_link,  # may be None
-        )
+    # Note: do not send welcome message here. Welcome/auto-enrollment actions
+    # are performed when an admin marks `paid=True` for the enrollment.
 
     return enrollment
 
@@ -54,9 +48,10 @@ def get_user_enrollments(db: Session, user: User):
     )
 
 def get_user_courses_with_progress(db: Session, user: User):
+    # Only return enrollments that are marked as paid (approved)
     enrollments = (
         db.query(Enrollment)
-        .filter(Enrollment.user_id == user.id)
+        .filter(Enrollment.user_id == user.id, Enrollment.paid == True)
         .all()
     )
 
@@ -76,6 +71,7 @@ def admin_enroll_user(
     db: Session,
     user_id: int,
     course_id: int,
+    paid: bool = False,
 ):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -99,6 +95,7 @@ def admin_enroll_user(
     enrollment = Enrollment(
         user_id=user_id,
         course_id=course_id,
+        paid=paid,
     )
     db.add(enrollment)
     db.commit()
