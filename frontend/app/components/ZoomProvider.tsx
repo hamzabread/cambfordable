@@ -37,6 +37,7 @@ export default function ZoomProvider({
   const [loading, setLoading] = useState(true);
   const [sessionReady, setSessionReady] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const [zoomError, setZoomError] = useState<string | null>(null);
   const router = useRouter();
 
   const meetingSDKElement = useRef<HTMLDivElement>(null);
@@ -111,8 +112,8 @@ export default function ZoomProvider({
     fetchUser();
   }, [router]);
 
-  // Determine admin status from the /auth/me response
-  const isAdmin = user?.is_admin === true;
+  // Admins and teachers both join as host, so they get the host UI/controls.
+  const isAdmin = user?.is_admin === true || user?.is_teacher === true;
 
   useEffect(() => {
     if (loading || !user || !classId) {
@@ -395,6 +396,7 @@ export default function ZoomProvider({
     const setupZoom = async () => {
       try {
         zoomGlobalLock = true;
+        setZoomError(null);
         const ZoomEmbedMod = await import("@zoom/meetingsdk/embedded");
         const ZoomMtgEmbedded =
           ZoomEmbedMod.ZoomMtgEmbedded || ZoomEmbedMod.default || ZoomEmbedMod;
@@ -479,7 +481,16 @@ export default function ZoomProvider({
         });
       } catch (error: any) {
         console.error("Zoom Error:", error);
-        if (error.type !== "ALREADY_JOINED") zoomGlobalLock = false;
+        // Surface the failure instead of leaving a silent black screen, and
+        // release the lock so a refresh can retry cleanly.
+        if (error?.type !== "ALREADY_JOINED") {
+          zoomGlobalLock = false;
+          const reason =
+            error?.reason || error?.message || error?.type || "Unknown error";
+          setZoomError(
+            `Could not start the meeting (${reason}). Try refreshing. If it keeps happening, please report this message.`
+          );
+        }
       }
     };
 
@@ -509,6 +520,22 @@ export default function ZoomProvider({
           <p className="mt-2 text-sm text-white/70">
             Please close this tab or sign out on the other device.
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (zoomError) {
+    return (
+      <div className="bg-black h-screen w-screen flex items-center justify-center text-white p-6 text-center">
+        <div className="max-w-md">
+          <p className="text-lg font-semibold">{zoomError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 rounded-lg bg-[#104278] text-white font-semibold hover:opacity-90"
+          >
+            Refresh
+          </button>
         </div>
       </div>
     );

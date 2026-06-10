@@ -144,11 +144,15 @@ const CoursesPage = () => {
         }
       );
 
-      setEnrolledCourses([...enrolledCourses, selectedCourse]);
-      setAvailableCourses(availableCourses.filter((c) => c.id !== selectedCourse.id));
-      setSuccess(`Successfully enrolled in ${selectedCourse.name}!`);
-      setTimeout(() => setSuccess(null), 3000);
+      // The student is NOT enrolled yet — enrollment only happens once an admin
+      // approves the payment. So we leave the course in "Available" and just
+      // confirm that the proof was submitted for review.
+      setSuccess(
+        `Payment proof submitted for ${selectedCourse.name}. You'll be enrolled once an admin approves your payment.`
+      );
+      setTimeout(() => setSuccess(null), 6000);
       setPaymentModalOpen(false);
+      setPaymentFile(null);
     } catch (err: any) {
       console.error("Error enrolling in course:", err);
       setError(err.response?.data?.detail || "Failed to enroll in course. Try again.");

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import axios from "axios";
 import { BookOpen, Video, Settings, Users, Shield } from "lucide-react";
 import CreateCourseForm from "../Admin/CreateCourseForm";
 import CreateLiveClassForm from "../Admin/CreateLiveClassForm";
@@ -14,6 +15,24 @@ interface AdminPanelProps {
 
 const AdminPanel = ({ isAdmin }: AdminPanelProps) => {
   const [activeTab, setActiveTab] = useState<"courses" | "classes" | "enroll" | "manage-admin-ta" | "payments">("courses");
+  const [hasPendingPayments, setHasPendingPayments] = useState(false);
+
+  const refreshPendingPayments = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/courses/pending-payments-count`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setHasPendingPayments(Boolean(res.data?.has_pending));
+    } catch {
+      // Non-critical: just don't show the dot if the check fails.
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshPendingPayments();
+  }, [refreshPendingPayments]);
 
   if (!isAdmin) {
     return null;
@@ -82,7 +101,7 @@ const AdminPanel = ({ isAdmin }: AdminPanelProps) => {
         </button>
         <button
           onClick={() => setActiveTab("payments")}
-          className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition whitespace-nowrap ${
+          className={`relative flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition whitespace-nowrap ${
             activeTab === "payments"
               ? "border-slate-900 text-slate-900"
               : "border-transparent text-slate-600 hover:text-slate-900"
@@ -90,6 +109,12 @@ const AdminPanel = ({ isAdmin }: AdminPanelProps) => {
         >
           <Users className="w-5 h-5" />
           Payments
+          {hasPendingPayments && (
+            <span
+              title="New payment proofs awaiting review"
+              className="absolute top-2 right-1 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white animate-pulse"
+            />
+          )}
         </button>
       </div>
 
@@ -99,7 +124,9 @@ const AdminPanel = ({ isAdmin }: AdminPanelProps) => {
         <div>
           {activeTab === "enroll" && <EnrollStudentForm />}
           {activeTab === "manage-admin-ta" && <ManageAdminTA />}
-          {activeTab === "payments" && <ManagePayments />}
+          {activeTab === "payments" && (
+            <ManagePayments onPaymentsChanged={refreshPendingPayments} />
+          )}
         </div>
       ) : (
         // Two column layout for courses and classes

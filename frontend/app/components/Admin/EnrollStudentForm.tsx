@@ -19,11 +19,6 @@ interface Course {
   code: string;
 }
 
-interface StudentWithEnrollment {
-  student: User;
-  isEnrolled: boolean;
-}
-
 const EnrollStudentForm = () => {
   const [students, setStudents] = useState<User[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -158,17 +153,13 @@ const EnrollStudentForm = () => {
   };
 
   const filteredStudents = students.filter((s) => {
-    // Filter by search term
-    const matchesSearch =
+    // Filter by search term only — every student is shown for every course,
+    // with a badge indicating whether they are currently enrolled.
+    return (
       s.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.email.toLowerCase().includes(searchTerm.toLowerCase());
-
-    // Exclude already enrolled students if a course is selected
-    const enrollmentKey = selectedCourse ? `${selectedCourse}-${s.id}` : null;
-    const isNotEnrolled = !enrollmentKey || !enrollments[enrollmentKey];
-
-    return matchesSearch && isNotEnrolled;
+      s.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   });
 
   return (
@@ -232,7 +223,7 @@ const EnrollStudentForm = () => {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-bold text-slate-900 mb-3">
-                👥 Available Students in{" "}
+                👥 All Students in{" "}
                 {selectedCourse
                   ? courses.find((c) => c.id === selectedCourse)?.name
                   : "Selected Course"}
@@ -290,6 +281,15 @@ const EnrollStudentForm = () => {
                                     {student.username} • {student.email}
                                   </div>
                                 </div>
+                                <span
+                                  className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                    isEnrolled
+                                      ? "bg-green-100 text-green-700"
+                                      : "bg-slate-100 text-slate-500"
+                                  }`}
+                                >
+                                  {isEnrolled ? "Enrolled" : "Not enrolled"}
+                                </span>
                               </button>
                             );
                           })}
@@ -319,16 +319,17 @@ const EnrollStudentForm = () => {
               🎯 Select a Course
             </h4>
             <p>
-              Click on a course on the left to view all available (non-enrolled) students. Only one
+              Click on a course on the left to view all students. Only one
               course can be active at a time.
             </p>
           </div>
           <div>
             <h4 className="font-semibold text-slate-900 mb-2">
-              ✅ Click to Enroll Student
+              ✅ Click to Toggle Enrollment
             </h4>
             <p>
-              Click on any student to enroll them. Once enrolled, students are removed from the list.
+              Every student is listed with an "Enrolled" or "Not enrolled" badge.
+              Click a student to enroll them, or click again to unenroll.
             </p>
           </div>
           <div>
@@ -341,10 +342,11 @@ const EnrollStudentForm = () => {
           </div>
           <div>
             <h4 className="font-semibold text-slate-900 mb-2">
-              💡 Only Available Students Shown
+              💡 Enrollment Status at a Glance
             </h4>
             <p>
-              The list automatically hides already-enrolled students. Only unenrolled students appear here.
+              All students appear for every course. A green "Enrolled" badge shows
+              who is already enrolled; a grey "Not enrolled" badge shows who isn't.
             </p>
           </div>
         </div>

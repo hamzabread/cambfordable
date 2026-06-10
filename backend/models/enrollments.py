@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, UniqueConstraint, Boolean, String
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, UniqueConstraint, Boolean, String, LargeBinary
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -17,6 +17,11 @@ class Enrollment(Base):
     paid = Column(Boolean, default=False, nullable=False)
     payment_proof_url = Column(String, nullable=True)
     payment_proof_name = Column(String, nullable=True)
+    # Proof bytes are stored in the DB so they survive Railway's ephemeral
+    # filesystem (the local uploads/ folder is wiped on every redeploy).
+    payment_proof_data = Column(LargeBinary, nullable=True)
+    payment_proof_mime = Column(String, nullable=True)
+    payment_uploaded_at = Column(DateTime, nullable=True)
     enrolled_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="enrollments")

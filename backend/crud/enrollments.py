@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 from models.enrollments import Enrollment
 from models.courses import Course
@@ -11,6 +13,8 @@ def create_enrollment(
     course_id: int,
     payment_proof_url: str | None = None,
     payment_proof_name: str | None = None,
+    payment_proof_data: bytes | None = None,
+    payment_proof_mime: str | None = None,
 ):
     # check if enrollment already exists
     enrollment = db.query(Enrollment).filter(
@@ -19,6 +23,16 @@ def create_enrollment(
     ).first()
 
     if enrollment:
+        # If the student re-submits proof while still unpaid, refresh the proof
+        # instead of silently ignoring it. Never touch an already-paid enrollment.
+        if payment_proof_data is not None and not enrollment.paid:
+            enrollment.payment_proof_url = payment_proof_url
+            enrollment.payment_proof_name = payment_proof_name
+            enrollment.payment_proof_data = payment_proof_data
+            enrollment.payment_proof_mime = payment_proof_mime
+            enrollment.payment_uploaded_at = datetime.utcnow()
+            db.commit()
+            db.refresh(enrollment)
         return enrollment
 
     # create new enrollment
@@ -27,11 +41,14 @@ def create_enrollment(
         course_id=course_id,
         payment_proof_url=payment_proof_url,
         payment_proof_name=payment_proof_name,
+        payment_proof_data=payment_proof_data,
+        payment_proof_mime=payment_proof_mime,
+        payment_uploaded_at=datetime.utcnow() if payment_proof_data is not None else None,
     )
     db.add(enrollment)
     db.commit()
     db.refresh(enrollment)
-    
+
     # Note: do not send welcome message here. Welcome/auto-enrollment actions
     # are performed when an admin marks `paid=True` for the enrollment.
 

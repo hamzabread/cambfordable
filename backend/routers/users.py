@@ -12,6 +12,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 class UpdateUserRoleSchema(BaseModel):
     is_admin: bool
     is_ta: bool
+    is_teacher: bool = False
 
 
 class UpdateUserPaymentSchema(BaseModel):
@@ -40,14 +41,16 @@ def update_user_role(
     
     user.is_admin = role_data.is_admin
     user.is_ta = role_data.is_ta
+    user.is_teacher = role_data.is_teacher
     db.commit()
     db.refresh(user)
-    
+
     return {
         "message": "User role updated successfully",
         "user_id": user.id,
         "is_admin": user.is_admin,
-        "is_ta": user.is_ta
+        "is_ta": user.is_ta,
+        "is_teacher": user.is_teacher,
     }
 
 

@@ -51,6 +51,27 @@ def get_current_user(
 
     return user
 
+def get_user_from_token(token: str, db: Session) -> User | None:
+    """
+    Resolve a User from a raw JWT string (no FastAPI dependency).
+
+    Used for links opened in a new browser tab that cannot send an
+    Authorization header — the token is passed as a query param instead.
+    Returns None if the token is missing/invalid or the user no longer exists.
+    """
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str | None = payload.get("sub")
+        if username is None:
+            return None
+    except JWTError:
+        return None
+
+    return get_user_by_username(db, username)
+
+
 def create_refresh_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES))
@@ -70,6 +91,17 @@ def get_current_admin_or_ta(current_user: User = Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin or TA privileges required"
+        )
+    return current_user
+
+
+def get_current_admin_or_teacher(current_user: User = Depends(get_current_user)):
+    """Allow admins and teachers. Teachers share the admin's course/live-class
+    tools but are blocked from payments, enrollment and role management."""
+    if not current_user.is_admin and not current_user.is_teacher:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin or Teacher privileges required"
         )
     return current_user
 

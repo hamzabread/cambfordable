@@ -12,6 +12,7 @@ import ActiveCourses from "../components/Dashboard/ActiveCourses";
 import Notifications from "../components/Dashboard/Notification";
 import AdminPanel from "../components/Admin/AdminPanel";
 import TAPanel from "../components/TA/TAPanel";
+import TeacherPanel from "../components/Teacher/TeacherPanel";
 
 interface User {
   username: string;
@@ -20,6 +21,7 @@ interface User {
   id: number;
   is_admin?: boolean;
   is_ta?: boolean;
+  is_teacher?: boolean;
 }
 
 const Dashboard = () => {
@@ -89,9 +91,11 @@ const Dashboard = () => {
         {/* Content Area */}
         <main className="flex-1 overflow-auto">
           <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
-            {/* Show Admin Panel if user is admin */}
+            {/* Show the panel that matches the user's role */}
             {user.is_admin ? (
               <AdminPanel isAdmin={true} />
+            ) : user.is_teacher ? (
+              <TeacherPanel />
             ) : user.is_ta ? (
               <TAPanel />
             ) : (

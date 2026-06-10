@@ -12,7 +12,7 @@ from schemas.live_classes import (
     LiveClassSessionClaim,
     LiveClassSessionStatus,
 )
-from core.security import get_current_admin
+from core.security import get_current_admin, get_current_admin_or_teacher
 from models.live_classes import LiveClass
 from models.live_class_sessions import LiveClassSession
 from core.zoom_sdk import generate_zoom_sdk_signature
@@ -46,8 +46,8 @@ def get_zoom_sdk(
         user=current_user,
     )
 
-    # 1. Determine the role based on admin status
-    user_role = 1 if current_user.is_admin else 0
+    # 1. Determine the role: admins and teachers join as host (1), students as attendee (0)
+    user_role = 1 if (current_user.is_admin or current_user.is_teacher) else 0
 
     # 2. Pass user_role instead of 0
     signature = generate_zoom_sdk_signature(
@@ -167,10 +167,10 @@ def release_live_class_session(
 async def admin_create_live_class(
     live_class_in: LiveClassCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin),
+    current_user: User = Depends(get_current_admin_or_teacher),
 ):
     """
-    Admin creates a live class:
+    Admin or teacher creates a live class:
     - Zoom meeting is created dynamically
     - meeting_id is saved in DB
     """

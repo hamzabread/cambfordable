@@ -26,6 +26,7 @@ class UserMe(UserBase):
     id: int
     is_admin: bool
     is_ta: bool
+    is_teacher: bool = False
     payment: bool = False
     phone_number: Optional[str] = None
 

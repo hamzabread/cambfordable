@@ -23,10 +23,15 @@ interface EnrollmentPayment {
   paid: boolean;
   payment_proof_url?: string | null;
   payment_proof_name?: string | null;
+  payment_uploaded_at?: string | null;
   user: EnrollmentUser;
 }
 
-const ManagePayments = () => {
+interface ManagePaymentsProps {
+  onPaymentsChanged?: () => void;
+}
+
+const ManagePayments = ({ onPaymentsChanged }: ManagePaymentsProps = {}) => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<number | null>(null);
   const [enrollments, setEnrollments] = useState<EnrollmentPayment[]>([]);
@@ -106,6 +111,8 @@ const ManagePayments = () => {
       setSuccess(`✅ ${name} marked as ${nextPaid ? "paid" : "unpaid"}`);
       setTimeout(() => setSuccess(null), 3000);
       setError(null);
+      // Let the parent refresh the Payments-tab red-dot notification.
+      onPaymentsChanged?.();
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to update payment status");
     } finally {
@@ -116,7 +123,22 @@ const ManagePayments = () => {
   const getProofUrl = (entry: EnrollmentPayment) => {
     if (!entry.payment_proof_url) return null;
     const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
-    return `${apiBase}${entry.payment_proof_url}`;
+    // The proof is served from the DB behind an auth check. Since it opens in a
+    // new tab (no Authorization header), the token travels as a query param.
+    const token = localStorage.getItem("access_token") || "";
+    return `${apiBase}${entry.payment_proof_url}?token=${encodeURIComponent(token)}`;
+  };
+
+  const formatUploadedAt = (value?: string | null) => {
+    if (!value) return null;
+    // Backend stores naive UTC timestamps; treat a missing timezone as UTC.
+    const normalized = /[zZ]|[+-]\d{2}:?\d{2}$/.test(value) ? value : `${value}Z`;
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleString(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
   };
 
   const filteredEnrollments = enrollments.filter((entry) => {
@@ -210,14 +232,21 @@ const ManagePayments = () => {
                             {entry.user.username} • {entry.user.email}
                           </div>
                           {entry.payment_proof_url && (
-                            <a
-                              className="text-xs text-emerald-700 underline"
-                              href={getProofUrl(entry) ?? "#"}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              View payment proof
-                            </a>
+                            <div className="mt-0.5">
+                              <a
+                                className="text-xs text-emerald-700 underline"
+                                href={getProofUrl(entry) ?? "#"}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                View payment proof
+                              </a>
+                              {formatUploadedAt(entry.payment_uploaded_at) && (
+                                <span className="block text-[11px] text-slate-400">
+                                  Uploaded {formatUploadedAt(entry.payment_uploaded_at)}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                         <button

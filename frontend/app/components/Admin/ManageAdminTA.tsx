@@ -11,6 +11,7 @@ interface User {
   email: string;
   is_admin: boolean;
   is_ta: boolean;
+  is_teacher?: boolean;
   payment?: boolean;
 }
 
@@ -31,7 +32,7 @@ const ManageAdminTA = () => {
 
   // Form state
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [selectedRole, setSelectedRole] = useState<"admin" | "ta" | null>(null);
+  const [selectedRole, setSelectedRole] = useState<"admin" | "ta" | "teacher" | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -81,6 +82,7 @@ const ManageAdminTA = () => {
         {
           is_admin: selectedRole === "admin",
           is_ta: selectedRole === "ta",
+          is_teacher: selectedRole === "teacher",
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -100,7 +102,12 @@ const ManageAdminTA = () => {
       );
 
       const courseName = courses.find((c) => c.id === selectedCourse)?.name;
-      const roleLabel = selectedRole === "admin" ? "Admin" : "TA";
+      const roleLabel =
+        selectedRole === "admin"
+          ? "Admin"
+          : selectedRole === "teacher"
+          ? "Teacher"
+          : "TA";
       setSuccess(
         `✅ ${selectedUser.full_name} is now a ${roleLabel} in ${courseName}`
       );
@@ -219,6 +226,8 @@ const ManageAdminTA = () => {
                     <div className="text-xs text-slate-400 mt-1">
                       {user.is_admin
                         ? "Currently: Admin"
+                        : user.is_teacher
+                        ? "Currently: Teacher"
                         : user.is_ta
                         ? "Currently: TA"
                         : "Currently: Student"}
@@ -282,6 +291,20 @@ const ManageAdminTA = () => {
                 <div className="font-semibold text-slate-900">👨‍💼 Admin</div>
                 <div className="text-xs text-slate-500 mt-1">
                   Full system access and course management
+                </div>
+              </button>
+              <button
+                onClick={() => setSelectedRole("teacher")}
+                className={`w-full text-left p-4 rounded-lg border-2 transition ${
+                  selectedRole === "teacher"
+                    ? "border-indigo-600 bg-indigo-50"
+                    : "border-slate-200 hover:border-indigo-300"
+                }`}
+              >
+                <div className="font-semibold text-slate-900">🎓 Teacher</div>
+                <div className="text-xs text-slate-500 mt-1">
+                  Create courses &amp; live classes and host meetings. No access to
+                  payments, enrollment, or admin/TA management.
                 </div>
               </button>
               <button

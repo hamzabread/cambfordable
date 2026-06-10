@@ -1,4 +1,6 @@
 # schemas/enrollments.py
+from datetime import datetime
+
 from pydantic import BaseModel
 
 class AdminEnrollRequest(BaseModel):
@@ -28,6 +30,7 @@ class EnrollmentPaymentOut(BaseModel):
     paid: bool
     payment_proof_url: str | None = None
     payment_proof_name: str | None = None
+    payment_uploaded_at: datetime | None = None
     user: EnrollmentUserOut
 
     class Config:
