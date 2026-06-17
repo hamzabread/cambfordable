@@ -40,9 +40,12 @@ const ManagePayments = ({ onPaymentsChanged }: ManagePaymentsProps = {}) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  // Ids of courses that have a new (unreviewed) payment proof — these get a red dot.
+  const [pendingCourseIds, setPendingCourseIds] = useState<number[]>([]);
 
   useEffect(() => {
     fetchCourses();
+    fetchPendingCourses();
   }, []);
 
   useEffect(() => {
@@ -50,6 +53,42 @@ const ManagePayments = ({ onPaymentsChanged }: ManagePaymentsProps = {}) => {
       fetchEnrollments(selectedCourse);
     }
   }, [selectedCourse]);
+
+  const fetchPendingCourses = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/courses/pending-payments`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setPendingCourseIds(response.data?.course_ids || []);
+    } catch {
+      // Non-critical: just don't show the dots if the check fails.
+    }
+  };
+
+  const handleSelectCourse = async (courseId: number) => {
+    setSelectedCourse(courseId);
+
+    // Opening a course with a pending proof clears its red dot. Persist that so
+    // the dot stays gone until a newer payment arrives, and refresh the parent's
+    // Payments-tab dot (which goes away once no course has a pending proof).
+    if (!pendingCourseIds.includes(courseId)) return;
+
+    setPendingCourseIds((prev) => prev.filter((id) => id !== courseId));
+    try {
+      const token = localStorage.getItem("access_token");
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/courses/${courseId}/mark-payments-seen`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      onPaymentsChanged?.();
+    } catch {
+      // If it fails, re-show the dot so the admin knows it's still unreviewed.
+      setPendingCourseIds((prev) => (prev.includes(courseId) ? prev : [...prev, courseId]));
+    }
+  };
 
   const fetchCourses = async () => {
     setLoading(true);
@@ -111,7 +150,9 @@ const ManagePayments = ({ onPaymentsChanged }: ManagePaymentsProps = {}) => {
       setSuccess(`✅ ${name} marked as ${nextPaid ? "paid" : "unpaid"}`);
       setTimeout(() => setSuccess(null), 3000);
       setError(null);
-      // Let the parent refresh the Payments-tab red-dot notification.
+      // Approving/unapproving changes what's pending — refresh both the
+      // per-course dots and the parent's Payments-tab red dot.
+      fetchPendingCourses();
       onPaymentsChanged?.();
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to update payment status");
@@ -179,13 +220,19 @@ const ManagePayments = ({ onPaymentsChanged }: ManagePaymentsProps = {}) => {
               {courses.map((course) => (
                 <button
                   key={course.id}
-                  onClick={() => setSelectedCourse(course.id)}
-                  className={`w-full text-left p-4 rounded-lg border-2 transition ${
+                  onClick={() => handleSelectCourse(course.id)}
+                  className={`relative w-full text-left p-4 rounded-lg border-2 transition ${
                     selectedCourse === course.id
                       ? "border-emerald-600 bg-emerald-50"
                       : "border-slate-200 hover:border-emerald-300 bg-white"
                   }`}
                 >
+                  {pendingCourseIds.includes(course.id) && (
+                    <span
+                      title="New payment proof awaiting review"
+                      className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white animate-pulse"
+                    />
+                  )}
                   <div className="font-semibold text-slate-900">
                     {course.name}
                   </div>

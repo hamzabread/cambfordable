@@ -21,7 +21,7 @@ const AdminPanel = ({ isAdmin }: AdminPanelProps) => {
     try {
       const token = localStorage.getItem("access_token");
       const res = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/admin/courses/pending-payments-count`,
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/courses/pending-payments`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setHasPendingPayments(Boolean(res.data?.has_pending));

@@ -30,6 +30,8 @@ COLUMNS = [
     ("enrollments", "payment_proof_mime", "VARCHAR"),
     ("enrollments", "payment_uploaded_at", "TIMESTAMP"),
     ("users", "is_teacher", "BOOLEAN DEFAULT FALSE NOT NULL"),
+    ("courses", "payments_seen_at", "TIMESTAMP"),  # red-dot "reviewed" marker
+    ("enrollments", "paid_at", "TIMESTAMP"),  # subscription period start
 ]
 
 print("🔍 Connecting to database...")

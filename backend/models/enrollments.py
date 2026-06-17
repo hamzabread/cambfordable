@@ -22,6 +22,10 @@ class Enrollment(Base):
     payment_proof_data = Column(LargeBinary, nullable=True)
     payment_proof_mime = Column(String, nullable=True)
     payment_uploaded_at = Column(DateTime, nullable=True)
+    # When the admin confirmed the current paid period. The subscription runs for
+    # SUBSCRIPTION_DAYS from here; after that the enrollment auto-reverts to unpaid
+    # and the proof is cleared. Null while unpaid.
+    paid_at = Column(DateTime, nullable=True)
     enrolled_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="enrollments")

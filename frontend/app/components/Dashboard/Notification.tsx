@@ -26,6 +26,32 @@ const Notifications = () => {
 
         const generatedNotifications: Notification[] = [];
 
+        // Payment reminders come first — a lapsing subscription is the most
+        // important thing for a student to see.
+        try {
+          const payRes = await axios.get(
+            `${process.env.NEXT_PUBLIC_API_URL}/courses/payment-status`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+
+          if (Array.isArray(payRes.data)) {
+            for (const status of payRes.data) {
+              if (!status.reminder) continue;
+              const days = status.days_remaining;
+              generatedNotifications.push({
+                id: `payment-${status.course_id}`,
+                type: "warning",
+                icon: <AlertCircle className="w-5 h-5" />,
+                message: `Payment due: your subscription for ${status.course_name} expires in ${days} day${
+                  days === 1 ? "" : "s"
+                }. Please renew to keep access.`,
+              });
+            }
+          }
+        } catch (err) {
+          console.log("Error fetching payment status");
+        }
+
         // Fetch user's courses
         try {
           const coursesRes = await axios.get(
@@ -222,24 +248,32 @@ const Notifications = () => {
       </h2>
 
       <div className="space-y-3 sm:space-y-4">
-        {notifications.map((notif) => (
-          <div
-            key={notif.id}
-            className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border border-slate-200 hover:border-slate-300 transition"
-          >
-            {/* Icon */}
-            <div className="flex-shrink-0 text-slate-600 mt-1">
-              {notif.icon}
-            </div>
+        {notifications.map((notif) => {
+          const styles =
+            notif.type === "warning"
+              ? { box: "border-red-200 bg-red-50 hover:border-red-300", icon: "text-red-600", text: "text-red-800" }
+              : notif.type === "success"
+              ? { box: "border-emerald-200 bg-emerald-50 hover:border-emerald-300", icon: "text-emerald-600", text: "text-emerald-800" }
+              : { box: "border-slate-200 hover:border-slate-300", icon: "text-slate-600", text: "text-slate-700" };
+          return (
+            <div
+              key={notif.id}
+              className={`flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border transition ${styles.box}`}
+            >
+              {/* Icon */}
+              <div className={`flex-shrink-0 mt-1 ${styles.icon}`}>
+                {notif.icon}
+              </div>
 
-            {/* Message */}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm sm:text-base text-slate-700 font-medium break-words">
-                {notif.message}
-              </p>
+              {/* Message */}
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm sm:text-base font-medium break-words ${styles.text}`}>
+                  {notif.message}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* View All Button */}

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class AdminEnrollRequest(BaseModel):
     user_id: int
     course_id: int
+    paid: bool = False
 
 
 class AdminPaymentRequest(BaseModel):

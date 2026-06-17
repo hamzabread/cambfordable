@@ -498,7 +498,11 @@ export default function ZoomProvider({
     return () => {
       zoomGlobalLock = false;
     };
-  }, [meetingData, isAdmin, loading, user]);
+    // sessionReady/sessionError are read in the guard above, so the effect must
+    // re-run when the async session claim resolves — otherwise Zoom never
+    // initializes (the claim returns *after* the other deps settle) and the
+    // meeting stays a black screen.
+  }, [meetingData, isAdmin, loading, user, sessionReady, sessionError]);
 
   const enterFullScreen = () => {
     const elem = document.documentElement;

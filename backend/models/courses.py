@@ -1,8 +1,8 @@
-from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import Column, Integer, String, Text, DateTime
 from sqlalchemy.orm import relationship
 from database import Base
 
-class Course(Base): 
+class Course(Base):
 
     __tablename__ = "courses"
 
@@ -12,6 +12,9 @@ class Course(Base):
     next_class = Column(String, nullable=True)
     time = Column(String, nullable=True)
     whatsapp_invite_link = Column(String, nullable=True)  # Manual WhatsApp group invite link
+    # When an admin last opened this course's payments. A pending proof newer
+    # than this still shows a red dot; opening the course updates it (clears dot).
+    payments_seen_at = Column(DateTime, nullable=True)
 
     enrollments = relationship(
         "Enrollment",

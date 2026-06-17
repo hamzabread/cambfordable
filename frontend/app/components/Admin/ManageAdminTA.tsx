@@ -89,12 +89,14 @@ const ManageAdminTA = () => {
         }
       );
 
-      // Enroll in course
+      // Enroll in course. Admins and teachers get paid access to the course
+      // they're assigned to (so they can open it immediately); TAs do not.
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/admin/courses/enroll`,
         {
           user_id: selectedUser.id,
           course_id: selectedCourse,
+          paid: selectedRole === "teacher" || selectedRole === "admin",
         },
         {
           headers: { Authorization: `Bearer ${token}` },
