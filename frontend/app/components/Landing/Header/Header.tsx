@@ -3,6 +3,8 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+//header
+
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -69,7 +71,7 @@ const Header = () => {
                       Dashboard
                     </button>
                   </Link>
-                  <button 
+                  <button
                     onClick={handleLogout}
                     className="p-4 py-1.5 cursor-pointer text-[18px] border border-white/50 text-white rounded-md hover:bg-white/10 transition"
                   >
@@ -119,23 +121,20 @@ const Header = () => {
 
       {/* Mobile Menu Offcanvas */}
       <div
-        className={`fixed inset-0 z-50 md:hidden ${
-          isOpen ? "" : "pointer-events-none"
-        }`}
+        className={`fixed inset-0 z-50 md:hidden ${isOpen ? "" : "pointer-events-none"
+          }`}
       >
         {/* Overlay */}
         <div
-          className={`absolute inset-0 bg-black/50 transition-opacity duration-300 ease-in-out ${
-            isOpen ? "opacity-100" : "opacity-0"
-          }`}
+          className={`absolute inset-0 bg-black/50 transition-opacity duration-300 ease-in-out ${isOpen ? "opacity-100" : "opacity-0"
+            }`}
           onClick={() => setIsOpen(false)}
         />
 
         {/* Panel */}
         <div
-          className={`absolute top-0 left-0 h-full w-80 bg-[#1e3557] transform transition-transform duration-300 ease-in-out ${
-            isOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+          className={`absolute top-0 left-0 h-full w-80 bg-[#1e3557] transform transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
           role="dialog"
           aria-modal="true"
         >
@@ -200,7 +199,7 @@ const Header = () => {
                         Dashboard
                       </button>
                     </Link>
-                    <button 
+                    <button
                       onClick={() => {
                         handleLogout();
                         setIsOpen(false);
