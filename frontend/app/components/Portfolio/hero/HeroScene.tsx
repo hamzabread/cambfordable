@@ -5,8 +5,6 @@ import { Float, Stars, Sparkles, Environment } from "@react-three/drei";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
-const SIDE = 0.44;
-const STEP = SIDE + 0.026;
 const Group = "group" as any;
 const Mesh = "mesh" as any;
 const Points = "points" as any;
@@ -19,9 +17,9 @@ const AmbientLight = "ambientLight" as any;
 const DirectionalLight = "directionalLight" as any;
 const PointLight = "pointLight" as any;
 
-// --------------- Rubik's Cube ---------------
+// --------------- Chess King ---------------
 
-function RubiksCube() {
+function ChessKing() {
   const groupRef = useRef<THREE.Group>(null!);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -32,58 +30,109 @@ function RubiksCube() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  const { geo, cubies } = useMemo(() => {
-    const geo = new THREE.BoxGeometry(SIDE, SIDE, SIDE);
-
-    const mk = (color: string, rough = 0.08) =>
-      new THREE.MeshStandardMaterial({ color, metalness: 0.18, roughness: rough });
-
-    const M = {
-      r: mk("#FF6B1A"),       // +X  right  = orange
-      l: mk("#E8282E"),       // -X  left   = red
-      t: mk("#EDE7DB"),       // +Y  top    = cream/white
-      b: mk("#F5C518"),       // -Y  bottom = yellow
-      f: mk("#1B5BBE"),       // +Z  front  = blue
-      k: mk("#1EA851"),       // -Z  back   = green
-      i: mk("#0c0916", 0.95), //    inner  = dark
+  const { latheGeo, crossGeoVert, crossGeoHoriz, material } = useMemo(() => {
+    // Generate smooth profile points for the King lathe geometry
+    const points: THREE.Vector2[] = [];
+    const addPt = (x: number, y: number) => {
+      points.push(new THREE.Vector2(x, y));
     };
 
-    const cubies: { pos: [number, number, number]; mats: THREE.MeshStandardMaterial[] }[] = [];
-
-    for (let gx = -1; gx <= 1; gx++) {
-      for (let gy = -1; gy <= 1; gy++) {
-        for (let gz = -1; gz <= 1; gz++) {
-          cubies.push({
-            pos: [gx * STEP, gy * STEP, gz * STEP],
-            mats: [
-              gx === 1  ? M.r : M.i,
-              gx === -1 ? M.l : M.i,
-              gy === 1  ? M.t : M.i,
-              gy === -1 ? M.b : M.i,
-              gz === 1  ? M.f : M.i,
-              gz === -1 ? M.k : M.i,
-            ],
-          });
-        }
-      }
+    // King profile (highly detailed and smooth curve subdivisions)
+    addPt(0, 0);
+    addPt(0.9, 0);
+    addPt(0.9, 0.15);
+    addPt(0.82, 0.22);
+    addPt(0.68, 0.25);
+    
+    // Tapered pedestal (concave curve)
+    for (let i = 0; i <= 8; i++) {
+      const t = i / 8;
+      const y = 0.25 + t * 0.25;
+      const x = 0.68 - Math.sin(t * Math.PI / 2) * 0.13;
+      addPt(x, y);
     }
 
-    return { geo, cubies };
+    // Collar (rounded torus shape)
+    for (let i = 0; i <= 8; i++) {
+      const t = i / 8;
+      const angle = (t - 0.5) * Math.PI; // -pi/2 to pi/2
+      const y = 0.6 + Math.sin(angle) * 0.1;
+      const x = 0.6 + Math.cos(angle) * 0.1;
+      addPt(x, y);
+    }
+    addPt(0.5, 0.7);
+
+    // Main shaft (straight tapered line)
+    for (let i = 1; i <= 8; i++) {
+      const t = i / 8;
+      const y = 0.7 + t * 0.9;
+      const x = 0.5 - t * 0.2;
+      addPt(x, y);
+    }
+
+    // Neck ring / Head base (torus-like ring)
+    for (let i = 0; i <= 8; i++) {
+      const t = i / 8;
+      const angle = (t - 0.5) * Math.PI;
+      const y = 1.7 + Math.sin(angle) * 0.08;
+      const x = 0.36 + Math.cos(angle) * 0.06;
+      addPt(x, y);
+    }
+
+    // Head/Crown body (flared bulbous shape)
+    for (let i = 0; i <= 12; i++) {
+      const t = i / 12;
+      const y = 1.8 + t * 0.7;
+      const x = 0.3 + Math.sin(t * Math.PI) * 0.23 - t * 0.04 + (t > 0.5 ? (t-0.5)*0.08 : 0);
+      addPt(x, y);
+    }
+
+    // Crown top (flares out at the top rim)
+    for (let i = 1; i <= 6; i++) {
+      const t = i / 6;
+      const y = 2.5 + t * 0.3;
+      const x = 0.4 + t * 0.25;
+      addPt(x, y);
+    }
+    
+    // Top surface closing
+    addPt(0, 2.8);
+
+    // Lathe geometry with high segment count for ultra-smooth circular rendering
+    const latheGeo = new THREE.LatheGeometry(points, 128);
+    
+    // Cross geometries for the top
+    const crossGeoVert = new THREE.BoxGeometry(0.12, 0.45, 0.12);
+    const crossGeoHoriz = new THREE.BoxGeometry(0.32, 0.12, 0.12);
+
+    // Premium matte ivory/bone material with zero metallic reflection (smooth wooden/plastic look)
+    const material = new THREE.MeshStandardMaterial({
+      color: "#faf6e8",
+      metalness: 0.0,
+      roughness: 0.65,
+    });
+
+    return { latheGeo, crossGeoVert, crossGeoHoriz, material };
   }, []);
 
   useFrame(({ clock, mouse }) => {
     const t = clock.getElapsedTime();
-    groupRef.current.rotation.x = t * 0.14 + mouse.y * 0.22;
-    groupRef.current.rotation.y = t * 0.20 + mouse.x * 0.36;
+    // Smooth idle floating and rotation
+    groupRef.current.rotation.y = t * 0.25 + mouse.x * 0.42;
+    groupRef.current.rotation.x = Math.sin(t * 0.4) * 0.08 + mouse.y * 0.18;
     groupRef.current.position.x = isMobile ? 0 : 1.15;
+    groupRef.current.position.y = -1.4; // Keep it centered vertically
   });
 
   return (
-    <Float speed={1.3} floatIntensity={0.55} rotationIntensity={0}>
+    <Float speed={1.2} floatIntensity={0.6} rotationIntensity={0.1}>
       <Group ref={groupRef}>
-        {cubies.map(({ pos, mats }, i) => (
-          <Mesh key={i} position={pos} geometry={geo} material={mats} castShadow />
-        ))}
+        <Mesh geometry={latheGeo} material={material} castShadow receiveShadow />
+        {/* Cross on top */}
+        <Group position={[0, 2.9, 0]}>
+          <Mesh geometry={crossGeoVert} material={material} castShadow />
+          <Mesh position={[0, 0.08, 0]} geometry={crossGeoHoriz} material={material} castShadow />
+        </Group>
       </Group>
     </Float>
   );
@@ -150,7 +199,7 @@ export default function HeroScene() {
       <Suspense fallback={null}>
         <Stars radius={60} depth={28} count={2000} factor={3} saturation={0.3} fade speed={0.45} />
         <Sparkles count={55} scale={[9, 7, 7]} size={1.4} speed={0.25} color="#bf8fff" />
-        <RubiksCube />
+        <ChessKing />
         <Particles />
         <Environment preset="city" background={false} />
       </Suspense>

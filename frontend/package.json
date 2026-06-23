@@ -10,8 +10,10 @@
         "export": "next export"
     },
     "dependencies": {
-        "@react-three/drei": "^10.7.7",
-        "@react-three/fiber": "^9.6.1",
+        "@builder.io/react": "^9.4.0",
+        "@builder.io/sdk": "^6.3.0",
+        "@react-three/drei": "^9.122.0",
+        "@react-three/fiber": "^8.18.0",
         "@zoom/meetingsdk": "5.0.4",
         "axios": "^1.13.2",
         "framer-motion": "^12.40.0",

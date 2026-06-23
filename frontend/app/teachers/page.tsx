@@ -1,13 +1,12 @@
 import { builder } from "@/lib/builder";
-import Landing from "./components/Landing/Landing";
+import { OurTeachersPage } from "../our-teachers/OurTeachersPage";
 import { RenderBuilderContent } from "@/components/RenderBuilderContent";
 
 interface PageProps {
   searchParams?: { [key: string]: string | string[] | undefined };
 }
 
-export default async function Home({ searchParams }: PageProps) {
-  // Safe searchParams resolution for compatibility across Next.js 14 and 15
+export default async function TeachersAliasPage({ searchParams }: PageProps) {
   const resolvedParams = searchParams instanceof Promise ? await searchParams : (searchParams || {});
   
   const isEditing = !!(
@@ -21,24 +20,23 @@ export default async function Home({ searchParams }: PageProps) {
 
   if (apiKey) {
     try {
+      // Check for content at both '/teachers' or '/our-teachers'
       content = await builder
         .get("page", {
           userAttributes: {
-            urlPath: "/",
+            urlPath: "/teachers",
           },
         })
         .toPromise();
     } catch (err) {
-      console.error("Error fetching Builder.io content for path '/': ", err);
+      console.error("Error fetching Builder.io content for path '/teachers': ", err);
     }
   }
 
-  // If Builder content exists, or the page is loaded inside Builder's editor iframe, render visual builder content
   if (content || isEditing) {
     return <RenderBuilderContent content={content} model="page" />;
   }
 
-  // Otherwise, render our default custom-coded Landing page
-  return <Landing />;
+  // Fallback to our existing OurTeachersPage
+  return <OurTeachersPage />;
 }
-

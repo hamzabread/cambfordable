@@ -1,7 +1,7 @@
 export const profile = {
   name: "Hamza Elahi",
   role: "Software Developer",
-  tagline: "Backend-leaning full-stack engineer building scalable web, IoT and AI products.",
+  tagline: "Backend-leaning full-stack engineer building scalable web, and AI products.",
   location: "Islamabad, Pakistan",
   email: "hamzaval2000@gmail.com",
   phone: "+92 321 5554608",
@@ -10,7 +10,7 @@ export const profile = {
   resumeUrl: "/Hamza-Elahi-Resume.pdf",
 };
 
-export const summary = `Software Developer and Computer Science student at GIKI specializing in Artificial Intelligence. I focus on shipping scalable web and IoT solutions in Agile teams — system architecture, backend services, and data-driven engineering workflows are where I do my best work.`;
+export const summary = `Software Developer and Computer Science student at GIKI specializing in Artificial Intelligence. I focus on shipping scalable web and AI products in Agile teams — System architecture, backend services, and data-driven engineering workflows are where I do my best work.`;
 
 export type Experience = {
   company: string;
@@ -27,9 +27,9 @@ export const experience: Experience[] = [
     period: "Aug 2025 — Present",
     location: "Islamabad, Pakistan",
     highlights: [
-      "Spearheaded frontend architecture in an Agile cycle, achieving a 30% performance lift via code-splitting.",
-      "Cut technical debt by 15% by refactoring legacy logic and coordinating a 5-person cross-functional team across weekly sprints.",
-      "Delivered 5+ production projects on Upwork with a 100% client satisfaction rating.",
+      "Architected frontend systems in an Agile cycle, achieving a 30% performance lift via code-splitting.",
+      "Reduced technical debt by 15% by refactoring legacy logic while coordinating with a 5-person cross-functional team.",
+      "Delivered 3+ production projects on Upwork with a 100% client satisfaction rating.",
     ],
   },
   {
@@ -38,8 +38,8 @@ export const experience: Experience[] = [
     period: "May 2025 — Aug 2025",
     location: "Islamabad, Pakistan",
     highlights: [
-      "Resolved 40+ high-priority tickets using systematic troubleshooting during rapid release cycles.",
-      "Maintained a 100% on-time delivery rate for high-traffic platform features under strict deployment windows.",
+      "Resolved 20+ high-priority tickets using systematic troubleshooting.",
+      "Maintained a 100% on-time delivery rate for high-traffic platform features under strict deadlines.",
     ],
   },
 ];
@@ -66,7 +66,7 @@ export const projects: Project[] = [
     description:
       "End-to-end e-commerce platform with secure auth, atomic real-time inventory and SSR-driven conversion.",
     highlights: [
-      "Engineered a full-stack auth system with AWS Cognito (+20% secure registration throughput).",
+      "Engineered a full-stack auth system with AWS Cognito and increased Lighthouse Performance and SEO by 30%.",
       "Optimized user conversion by 12% through Server-Side Rendering and atomic real-time inventory sync.",
     ],
     links: [
@@ -75,24 +75,24 @@ export const projects: Project[] = [
     ],
     accent: "violet",
   },
-  {
-    title: "Smart Attendance System",
-    subtitle: "AI-powered computer vision attendance",
-    client: true,
-    year: "2025",
-    stack: ["FastAPI", "React Native", "Face Recognition AI", "Docker", "PostgreSQL"],
-    description:
-      "A computer-vision pipeline that automates record-keeping for 200+ students with high accuracy and zero manual logs.",
-    highlights: [
-      "Constructed a CV pipeline reaching 92% identity-detection accuracy across 200+ students.",
-      "Reduced manual entry time by 80% with a centralized PostgreSQL backend and automated reports.",
-      "Containerized with Docker for consistent, reliable deployments across environments.",
-    ],
-    links: [
-      { label: "Code", href: "https://github.com/hamzabread/smart-attendance" },
-    ],
-    accent: "cyan",
-  },
+  // {
+  //   title: "Smart Attendance System",
+  //   subtitle: "AI-powered computer vision attendance",
+  //   client: true,
+  //   year: "2025",
+  //   stack: ["FastAPI", "React Native", "Face Recognition AI", "Docker", "PostgreSQL"],
+  //   description:
+  //     "A computer-vision pipeline that automates record-keeping for 200+ students with high accuracy and zero manual logs.",
+  //   highlights: [
+  //     "Constructed a CV pipeline reaching 92% identity-detection accuracy across 200+ students.",
+  //     "Reduced manual entry time by 80% with a centralized PostgreSQL backend and automated reports.",
+  //     "Containerized with Docker for consistent, reliable deployments across environments.",
+  //   ],
+  //   links: [
+  //     { label: "Code", href: "https://github.com/hamzabread/smart-attendance" },
+  //   ],
+  //   accent: "cyan",
+  // },
   {
     title: "Cambfordable",
     subtitle: "Live EdTech learning platform",
@@ -107,7 +107,7 @@ export const projects: Project[] = [
       "Resolved complex API integration bottlenecks across the video layer.",
     ],
     links: [
-      { label: "Live", href: "https://cambfordable.com" },
+      { label: "Live", href: "https://cambfordable-production.up.railway.app/" },
       { label: "Code", href: "https://github.com/hamzabread/cambfordable" },
     ],
     accent: "pink",

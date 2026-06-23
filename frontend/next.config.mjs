@@ -16,16 +16,16 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/meeting/:path*',
+        source: "/meeting/:path*",
         headers: [
-          { key: 'Cross-Origin-Embedder-Policy', value: 'credentialless' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          { key: "Cross-Origin-Embedder-Policy", value: "credentialless" },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
         ],
       },
     ];
   },
   // Helps the bundler handle the Zoom SDK's internal dependencies.
-  transpilePackages: ['@zoom/meetingsdk'],
+  transpilePackages: ["@zoom/meetingsdk"],
 };
 
 export default nextConfig;

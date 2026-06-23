@@ -1,4 +1,6 @@
 import React from "react";
+import { builder } from "@/lib/builder";
+import { RenderBuilderContent } from "@/components/RenderBuilderContent";
 import {
   AlarmClock,
   BookCheck,
@@ -23,7 +25,7 @@ type FlowStep = {
   detail: string;
 };
 
-export default function AboutPage() {
+function AboutPage() {
   const platformFeatures: PlatformFeature[] = [
     {
       icon: <Video className="w-7 h-7" />,
@@ -242,4 +244,41 @@ export default function AboutPage() {
       <Footer />
     </>
   );
+}
+
+interface PageProps {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}
+
+export default async function Page({ searchParams }: PageProps) {
+  const resolvedParams = searchParams instanceof Promise ? await searchParams : (searchParams || {});
+  
+  const isEditing = !!(
+    resolvedParams["builder.preview"] ||
+    resolvedParams["builder.editing"] ||
+    resolvedParams["builder.api_key"]
+  );
+
+  let content = null;
+  const apiKey = process.env.NEXT_PUBLIC_BUILDER_API_KEY;
+
+  if (apiKey) {
+    try {
+      content = await builder
+        .get("page", {
+          userAttributes: {
+            urlPath: "/about",
+          },
+        })
+        .toPromise();
+    } catch (err) {
+      console.error("Error fetching Builder.io content for path '/about': ", err);
+    }
+  }
+
+  if (content || isEditing) {
+    return <RenderBuilderContent content={content} model="page" />;
+  }
+
+  return <AboutPage />;
 }
