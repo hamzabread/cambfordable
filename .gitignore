@@ -52,9 +52,40 @@ config.py
 .env
 
 env.py
+!backend/alembic/env.py
 
 venv/
 .venv/
 
 *.db
 *.sqlite3
+
+# Uploaded files (student work, payment proofs) never belong in git
+backend/uploads/
+
+# Copied from node_modules by frontend/scripts/copy-zoom-sdk.mjs
+frontend/public/zoom-sdk/
+
+# Next.js build output wherever it ends up (a stray trace lands in backend/)
+.next/
+
+# AI agent tooling installed locally (Impeccable skills, hooks, personal settings)
+.agents/
+.codex/
+.cursor/
+.claude/
+.impeccable/*.local.json
+.impeccable/hook.cache.json
+
+# Test and coverage output
+.pytest_cache/
+.coverage
+htmlcov/
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+
+# Editors and OS
+.vscode/
+.idea/
+Thumbs.db
