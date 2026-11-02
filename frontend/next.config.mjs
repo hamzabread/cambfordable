@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // The browser tests build into their own folder (pointed at a throwaway
+  // backend), so they never overwrite the normal build in .next.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   // Lets a second browser session on 127.0.0.1 use the dev server (HMR and
   // hydration are blocked for other origins otherwise).
   allowedDevOrigins: ["127.0.0.1"],

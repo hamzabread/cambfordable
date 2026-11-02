@@ -84,6 +84,7 @@ htmlcov/
 frontend/test-results/
 frontend/playwright-report/
 frontend/blob-report/
+frontend/.next-e2e/
 
 # Editors and OS
 .vscode/
