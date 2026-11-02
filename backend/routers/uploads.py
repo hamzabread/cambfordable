@@ -1,6 +1,10 @@
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Query
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse
+from sqlalchemy.orm import Session
 from core.security import get_current_user
+from crud.file_access import can_read_upload
+from database import get_db
+from models.users import User
 import mimetypes
 import uuid
 import shutil
@@ -26,6 +30,32 @@ os.makedirs(LIVE_CLASSES_UPLOAD_DIR, exist_ok=True)
 os.makedirs(SOLUTIONS_UPLOAD_DIR, exist_ok=True)
 os.makedirs(PAYMENT_UPLOAD_DIR, exist_ok=True)
 
+UPLOAD_ROOT = "uploads"
+
+# URL segment -> (directory, access rule name). "live-classes" is the older
+# spelling of the attachment route.
+UPLOAD_CATEGORIES = {
+    "quiz_answers": (QUIZ_UPLOAD_DIR, "quiz_answers"),
+    "homeworks": (HOMEWORK_UPLOAD_DIR, "homeworks"),
+    "homework_images": (HOMEWORK_IMAGES_DIR, "homework_images"),
+    "quiz_images": (QUIZ_IMAGES_DIR, "quiz_images"),
+    "live_classes": (LIVE_CLASSES_UPLOAD_DIR, "live_classes"),
+    "live-classes": (LIVE_CLASSES_UPLOAD_DIR, "live_classes"),
+    "solutions": (SOLUTIONS_UPLOAD_DIR, "solutions"),
+    "payments": (PAYMENT_UPLOAD_DIR, "payments"),
+}
+
+# Anything else is downloaded rather than rendered, so an uploaded HTML or SVG
+# file can never run as a page.
+INLINE_MEDIA_TYPES = {
+    "application/pdf",
+    "image/gif",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "text/plain",
+}
+
 
 def _guess_media_type(filename: str) -> str:
     """Return a browser-friendly MIME type for common file extensions."""
@@ -36,221 +66,143 @@ def _guess_media_type(filename: str) -> str:
 def serve_file(file_path: str, filename: str, mode: str = "download") -> FileResponse:
     """
     Return a FileResponse.
-    mode="view"   → Content-Disposition: inline  (browser opens it)
-    mode="download"→ Content-Disposition: attachment (browser downloads)
+    mode="view"   → Content-Disposition: inline for types that are safe to render
+    otherwise     → Content-Disposition: attachment (browser downloads)
     """
-    if mode == "view":
-        media = _guess_media_type(filename)
-        return FileResponse(
-            path=file_path,
-            filename=filename,
-            media_type=media,
-            headers={"Content-Disposition": f'inline; filename="{filename}"'},
-        )
-    # download
+    media_type = _guess_media_type(filename)
+    inline = mode == "view" and media_type in INLINE_MEDIA_TYPES
     return FileResponse(
         path=file_path,
         filename=filename,
-        media_type="application/octet-stream",
+        media_type=media_type if inline else "application/octet-stream",
+        content_disposition_type="inline" if inline else "attachment",
+        headers={"X-Content-Type-Options": "nosniff"},
     )
 
+
+def _is_safe_filename(filename: str) -> bool:
+    """A stored upload name is one path segment, on every operating system."""
+    return bool(filename) and filename not in {".", ".."} and not any(
+        char in filename for char in ("/", "\\", ":", "\0")
+    )
+
+
+def _resolve_upload_path(directory: str, filename: str) -> str | None:
+    """Return the file's path if it is a real file directly inside directory."""
+    base = os.path.realpath(directory)
+    path = os.path.realpath(os.path.join(base, filename))
+    if os.path.dirname(path) != base or not os.path.isfile(path):
+        return None
+    return path
+
+
+MB = 1024 * 1024
+IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
+DOCUMENT_EXTENSIONS = {"pdf", "doc", "docx"} | IMAGE_EXTENSIONS
+ATTACHMENT_EXTENSIONS = DOCUMENT_EXTENSIONS | {"ppt", "pptx", "xls", "xlsx", "txt", "zip"}
+
+
+def _extension(filename: str | None) -> str:
+    return filename.rsplit(".", 1)[-1].lower() if filename and "." in filename else ""
+
+
+def validate_upload(file: UploadFile, allowed_extensions: set[str], max_bytes: int) -> None:
+    """Reject files by extension and size before they reach the disk."""
+    extension = _extension(file.filename)
+    if extension not in allowed_extensions:
+        allowed = ", ".join(sorted(ext.upper() for ext in allowed_extensions))
+        raise HTTPException(status_code=400, detail=f"This file type isn't allowed. Upload one of: {allowed}")
+    file.file.seek(0, 2)
+    size = file.file.tell()
+    file.file.seek(0)
+    if size == 0:
+        raise HTTPException(status_code=400, detail="The file is empty")
+    if size > max_bytes:
+        raise HTTPException(status_code=413, detail=f"The file must be {max_bytes // MB} MB or smaller")
+
+
 # --- HELPER FUNCTION FOR FILE SAVING ---
-def save_file(file: UploadFile, destination_dir: str) -> str:
+def save_file(file: UploadFile, destination_dir: str, prefix: str = "") -> str:
     original_name = file.filename
     ext = original_name.split(".")[-1] if "." in original_name else ""
     name_without_ext = original_name.rsplit(".", 1)[0] if "." in original_name else original_name
     
     unique_id = str(uuid.uuid4())[:8]
-    filename = f"{name_without_ext}_{unique_id}.{ext}" if ext else f"{name_without_ext}_{unique_id}"
+    filename = f"{prefix}{name_without_ext}_{unique_id}.{ext}" if ext else f"{prefix}{name_without_ext}_{unique_id}"
     
     # Simple sanitization
     filename = "".join(c for c in filename if c.isalnum() or c in "._- ")
-    path = os.path.join(destination_dir, filename)
+    # Stored as a URL path, so always forward slashes.
+    path = f"{destination_dir}/{filename}"
 
     with open(path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
         
     return path
 
-# --- QUIZ ENDPOINTS (EXISTING) ---
+
+def quiz_answer_prefix(user_id: int) -> str:
+    """Quiz answer files carry their uploader, so a submission can only
+    point at the student's own uploads."""
+    return f"u{user_id}_"
+
+
 @router.post("/quiz-answer")
-def upload_quiz_answer_file(file: UploadFile = File(...), user = Depends(get_current_user)):
-    path = save_file(file, QUIZ_UPLOAD_DIR)
+def upload_quiz_answer_file(
+    file: UploadFile = File(...),
+    quiz_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if quiz_id is not None:
+        from routers.quizzes import _require_quiz_access
+        _require_quiz_access(db, user, quiz_id)
+    validate_upload(file, DOCUMENT_EXTENSIONS, 10 * MB)
+    path = save_file(file, QUIZ_UPLOAD_DIR, prefix=quiz_answer_prefix(user.id))
     return {"file_url": f"/{path}", "original_filename": file.filename}
 
-@router.get("/quiz_answers/{filename}")
-def download_quiz_answer(filename: str, mode: str = Query("download")):
-    file_path = os.path.join(QUIZ_UPLOAD_DIR, filename)
-    if not os.path.exists(file_path):
+
+# --- READING FILES ---
+# Every read requires a login and a per-file permission check.
+
+@router.get("/{category}/{filename}")
+def read_upload(
+    category: str,
+    filename: str,
+    mode: str = Query("download"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if category not in UPLOAD_CATEGORIES or not _is_safe_filename(filename):
         raise HTTPException(status_code=404, detail="File not found")
-    return serve_file(file_path, filename, mode)
+
+    directory, access_rule = UPLOAD_CATEGORIES[category]
+    if not can_read_upload(db, user, access_rule, filename):
+        raise HTTPException(status_code=403, detail="You do not have access to this file")
+
+    path = _resolve_upload_path(directory, filename)
+    # Older homework files were saved directly under uploads/.
+    if not path and access_rule == "homeworks":
+        path = _resolve_upload_path(UPLOAD_ROOT, filename)
+    if not path:
+        raise HTTPException(status_code=404, detail="File not found")
+    return serve_file(path, filename, mode)
 
 
-# --- HOMEWORK ENDPOINTS (NEW) ---
-
-@router.post("/homeworks")
-def upload_homework_file(file: UploadFile = File(...), user = Depends(get_current_user)):
-    """Upload a homework file"""
-    path = save_file(file, HOMEWORK_UPLOAD_DIR)
-    # Returns /uploads/homeworks/filename.pdf
-    return {"file_url": f"/{path}", "original_filename": file.filename}
-
-# routers/uploads.py
-
-# backend/routers/uploads.py
-
-@router.get("/homeworks/{filename}")
-def download_homework(filename: str, mode: str = Query("download")):
-    # This specifically looks inside the 'uploads/homeworks' folder
-    file_path = os.path.join(HOMEWORK_UPLOAD_DIR, filename)
-    
-    if not os.path.exists(file_path):
-        # Fallback: check the base uploads folder
-        fallback_path = os.path.join("uploads", filename)
-        if os.path.exists(fallback_path):
-            return serve_file(fallback_path, filename, mode)
-        raise HTTPException(status_code=404, detail="Homework file not found")
-        
-    return serve_file(file_path, filename, mode)
-
-# --- LIVE CLASSES ENDPOINTS (NEW) ---
-
-@router.post("/live-classes")
-def upload_live_class_attachment(file: UploadFile = File(...), user = Depends(get_current_user)):
-    """Upload an attachment (PDF/image) for a past class"""
-    path = save_file(file, LIVE_CLASSES_UPLOAD_DIR)
-    # Returns /uploads/live_classes/filename.pdf
-    return {"file_url": f"/{path}", "original_filename": file.filename}
-
-@router.get("/live-classes/{filename}")
-def download_live_class_attachment(filename: str, mode: str = Query("download")):
-    # This specifically looks inside the 'uploads/live_classes' folder
-    file_path = os.path.join(LIVE_CLASSES_UPLOAD_DIR, filename)
-    
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Attachment not found")
-        
-    return serve_file(file_path, filename, mode)
-
-# --- PAYMENT PROOF ENDPOINTS ---
-
-@router.post("/payments")
-def upload_payment_proof(file: UploadFile = File(...), user = Depends(get_current_user)):
-    path = save_file(file, PAYMENT_UPLOAD_DIR)
-    return {"file_url": f"/{path}", "original_filename": file.filename}
-
-
-@router.get("/payments/{filename}")
-def download_payment_proof(filename: str, mode: str = Query("view")):
-    file_path = os.path.join(PAYMENT_UPLOAD_DIR, filename)
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Payment proof not found")
-    return serve_file(file_path, filename, mode)
-
-# --- SOLUTIONS ENDPOINTS ---
-
-@router.get("/solutions/{filename}")
-def download_solution_file(filename: str, mode: str = Query("download")):
-    """Download or view a solution file"""
-    file_path = os.path.join(SOLUTIONS_UPLOAD_DIR, filename)
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Solution file not found")
-    return serve_file(file_path, filename, mode)
-
-# routers/uploads.py
-
-@router.get("/{filename}")  # This catches /uploads/profile.jpeg
-def get_root_upload(filename: str, mode: str = Query("download")):
-    file_path = os.path.join("uploads", filename)
-    if os.path.exists(file_path):
-        return serve_file(file_path, filename, mode)
-    
-    # Also check homeworks folder as a fallback
-    hw_path = os.path.join(HOMEWORK_UPLOAD_DIR, filename)
-    if os.path.exists(hw_path):
-        return serve_file(hw_path, filename, mode)
-        
-    raise HTTPException(status_code=404, detail="File not found")
-
-
-# --- HOMEWORK IMAGES ---
-
-@router.post("/homework_images")
-def upload_homework_image(
-    file: UploadFile = File(...),
-    user = Depends(get_current_user)
+@router.get("/{filename}")
+def read_legacy_upload(
+    filename: str,
+    mode: str = Query("download"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
-    """Upload an image for a homework question"""
-    # Validate file type
-    allowed_types = {"image/jpeg", "image/png", "image/jpg"}
-    if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="Only JPEG and PNG images are allowed")
-    
-    # Validate file size (max 10MB for images)
-    file.file.seek(0, 2)
-    file_size = file.file.tell()
-    file.file.seek(0)
-    if file_size > 10 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="File size exceeds 10MB limit")
-    
-    path = save_file(file, HOMEWORK_IMAGES_DIR)
-    return {"image_url": f"/{path}", "original_filename": file.filename}
+    """Older homework submissions are stored as /uploads/<filename>."""
+    if not _is_safe_filename(filename):
+        raise HTTPException(status_code=404, detail="File not found")
+    if not can_read_upload(db, user, "homeworks", filename):
+        raise HTTPException(status_code=403, detail="You do not have access to this file")
 
-@router.get("/homework_images/{filename}")
-def download_homework_image(filename: str):
-    file_path = os.path.join(HOMEWORK_IMAGES_DIR, filename)
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Image not found")
-    
-    # Return file with CORS headers explicitly set
-    return FileResponse(
-        filename=filename,
-        headers={
-            "Cross-Origin-Resource-Policy": "cross-origin",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
-        }
-    )
-
-
-# --- QUIZ IMAGES ---
-
-@router.post("/quiz_images")
-def upload_quiz_image(
-    file: UploadFile = File(...),
-    user = Depends(get_current_user)
-):
-    """Upload an image for a quiz question"""
-    # Validate file type
-    allowed_types = {"image/jpeg", "image/png", "image/jpg"}
-    if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail="Only JPEG and PNG images are allowed")
-    
-    # Validate file size (max 10MB for images)
-    file.file.seek(0, 2)
-    file_size = file.file.tell()
-    file.file.seek(0)
-    if file_size > 10 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="File size exceeds 10MB limit")
-    
-    path = save_file(file, QUIZ_IMAGES_DIR)
-    return {"image_url": f"/{path}", "original_filename": file.filename}
-
-@router.get("/quiz_images/{filename}")
-def download_quiz_image(filename: str):
-    file_path = os.path.join(QUIZ_IMAGES_DIR, filename)
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Image not found")
-    
-    # Return file with CORS headers explicitly set
-    return FileResponse(
-        path=file_path,
-        filename=filename,
-        headers={
-            "Cross-Origin-Resource-Policy": "cross-origin",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
-        }
-    )
+    path = _resolve_upload_path(UPLOAD_ROOT, filename) or _resolve_upload_path(HOMEWORK_UPLOAD_DIR, filename)
+    if not path:
+        raise HTTPException(status_code=404, detail="File not found")
+    return serve_file(path, filename, mode)

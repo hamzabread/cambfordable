@@ -1,5 +1,5 @@
 # crud/payments.py
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from models.users import User
 from core.jazz_config import settings
 from core.jazzcash import generate_secure_hash
@@ -26,7 +26,7 @@ def create_jazzcash_payment_payload(
         "pp_TxnDateTime": datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S"),
         "pp_ReturnURL": settings.JAZZCASH_RETURN_URL,
         "pp_TxnExpiryDateTime": (
-            datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+            (datetime.now(timezone.utc) + timedelta(hours=1)).strftime("%Y%m%d%H%M%S")
         ),
     }
 

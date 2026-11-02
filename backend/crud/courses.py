@@ -25,6 +25,7 @@ def create_course(db: Session, course_in: CourseCreate):
     course = Course(
         name=course_in.name,
         code=course_in.code,
+        whatsapp_invite_link=course_in.whatsapp_invite_link,
     )
     db.add(course)
     db.commit()
