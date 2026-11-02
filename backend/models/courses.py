@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import Column, DateTime, Integer, String, Text
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -12,6 +12,8 @@ class Course(Base):
     next_class = Column(String, nullable=True)
     time = Column(String, nullable=True)
     whatsapp_invite_link = Column(String, nullable=True)  # Manual WhatsApp group invite link
+    # Archived courses keep their history but take no new enrollments or billing.
+    archived_at = Column(DateTime(timezone=True), nullable=True)
 
     enrollments = relationship(
         "Enrollment",

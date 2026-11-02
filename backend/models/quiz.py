@@ -11,6 +11,7 @@ class Quiz(Base):
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
     title = Column(String, nullable=False)
     total_marks = Column(Integer, nullable=False)
+    duration_minutes = Column(Integer, nullable=False, default=60)
     deadline = Column(TIMESTAMP(timezone=True), nullable=True)
     allow_late = Column(Boolean, default=False)
     solution_url = Column(String, nullable=True)  # URL to uploaded solution file

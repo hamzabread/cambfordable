@@ -13,6 +13,7 @@ class QuizSubmission(Base):
     score = Column(Integer, nullable=True)
     remarks = Column(String, nullable=True)  # Teacher feedback/remarks
     submitted_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow)
+    graded_at = Column(TIMESTAMP(timezone=True), nullable=True)
     is_late = Column(Boolean, default=False)
     tab_switches = Column(Integer, default=0)
     fullscreen_exits = Column(Integer, default=0)

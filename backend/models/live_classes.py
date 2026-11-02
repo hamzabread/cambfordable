@@ -11,7 +11,7 @@ class LiveClass(Base):
 
     title = Column(String, nullable=False)
 
-    starts_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
+    starts_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     ends_at = Column(DateTime(timezone=True))
 
     meeting_id = Column(String, nullable=False) #zoom sdk
@@ -22,6 +22,12 @@ class LiveClass(Base):
     
     # Attachment for past classes
     attachment_url = Column(String, nullable=True)
+
+    # Filled in from Zoom after the class (crud/zoom_sync.py).
+    recording_url = Column(String, nullable=True)
+    recording_passcode = Column(String, nullable=True)
+    recording_synced_at = Column(DateTime(timezone=True), nullable=True)
+    attendance_synced_at = Column(DateTime(timezone=True), nullable=True)
 
     @property
     def is_live(self) -> bool:
