@@ -19,11 +19,48 @@ pwd_context = CryptContext(
 )
 
 
-def create_access_token(data: dict, expires_delta: timedelta):
+def _encode(data: dict, expires_delta: timedelta, token_type: str) -> str:
+    now = datetime.now(timezone.utc)
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + expires_delta
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": now + expires_delta, "iat": int(now.timestamp()), "type": token_type})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def create_access_token(data: dict, expires_delta: timedelta):
+    return _encode(data, expires_delta, "access")
+
+
+def create_refresh_token(data: dict, expires_delta: timedelta | None = None):
+    return _encode(data, expires_delta or timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES), "refresh")
+
+
+def token_is_current(user: User, payload: dict) -> bool:
+    """A password change or reset ends every session issued before it."""
+    changed_at = user.password_changed_at
+    if changed_at is None:
+        return True
+    if changed_at.tzinfo is None:
+        changed_at = changed_at.replace(tzinfo=timezone.utc)
+    issued_at = payload.get("iat")
+    return isinstance(issued_at, (int, float)) and issued_at >= int(changed_at.timestamp())
+
+
+def user_from_token(db: Session, token: str, token_type: str = "access") -> User | None:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError:
+        return None
+    # Tokens issued before token types existed are access tokens.
+    if payload.get("type", "access") != token_type:
+        return None
+    username = payload.get("sub")
+    if not username:
+        return None
+    user = get_user_by_username(db, username)
+    if user is None or not token_is_current(user, payload):
+        return None
+    return user
+
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -31,31 +68,14 @@ def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str | None = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-
-    user = get_user_by_username(db, username)
+    user = user_from_token(db, token)
     if user is None:
-        raise credentials_exception
-
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Your session has expired. Please log in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return user
-
-def create_refresh_token(data: dict, expires_delta: timedelta | None = None):
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 def get_current_admin(current_user: User = Depends(get_current_user)):
     if not current_user.is_admin:
@@ -76,23 +96,8 @@ def get_current_admin_or_ta(current_user: User = Depends(get_current_user)):
 
 async def get_current_user_ws(websocket: WebSocket, db: Session) -> User:
     token = websocket.query_params.get("token")
-    if not token:
-        await websocket.close(code=1008)
-        raise HTTPException(status_code=403, detail="Missing token")
-
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str | None = payload.get("sub")
-        if username is None:
-            await websocket.close(code=1008)
-            raise HTTPException(status_code=401, detail="Invalid token")
-    except JWTError:
-        await websocket.close(code=1008)
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-    user = get_user_by_username(db, username)
+    user = user_from_token(db, token) if token else None
     if not user:
         await websocket.close(code=1008)
-        raise HTTPException(status_code=401, detail="User not found")
-
+        raise HTTPException(status_code=401, detail="Invalid token")
     return user
