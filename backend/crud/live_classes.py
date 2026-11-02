@@ -14,7 +14,7 @@ async def create_live_class(db: Session, title: str, course_id: int, starts_at: 
     Creates a Zoom meeting dynamically and saves the live class in the database.
     """
     # 1. Create Zoom meeting
-    zoom_meeting = await create_zoom_meeting(topic=title, start_time=starts_at)
+    zoom_meeting = await create_zoom_meeting(topic=title, start_time=starts_at, duration=duration)
 
     # 2. Save the live class in DB
     live_class = LiveClass(
@@ -65,12 +65,16 @@ def get_joinable_live_class(db: Session, *, class_id: int, user: User) -> LiveCl
     if not live_class:
         raise HTTPException(404, "Class not found")
 
-    enrollment = db.query(Enrollment).filter(
-        Enrollment.user_id == user.id,
-        Enrollment.course_id == live_class.course_id
-    ).first()
-    if not enrollment:
-        raise HTTPException(403, "You are not enrolled in this course")
+    # Admins can host any class; TAs and students need the course.
+    if not user.is_admin:
+        enrollment_query = db.query(Enrollment).filter(
+            Enrollment.user_id == user.id,
+            Enrollment.course_id == live_class.course_id,
+        )
+        if not user.is_ta:
+            enrollment_query = enrollment_query.filter(Enrollment.paid.is_(True))
+        if not enrollment_query.first():
+            raise HTTPException(403, "You are not enrolled in this course")
 
     now = datetime.now(timezone.utc)
     if now < live_class.starts_at:
@@ -82,9 +86,13 @@ def get_joinable_live_class(db: Session, *, class_id: int, user: User) -> LiveCl
     return live_class
 
 def get_user_live_classes(db: Session, user: User):
-    return (
+    if user.is_admin:
+        return db.query(LiveClass).order_by(LiveClass.starts_at.asc()).all()
+    query = (
         db.query(LiveClass)
         .join(Enrollment, Enrollment.course_id == LiveClass.course_id)
         .filter(Enrollment.user_id == user.id)
-        .all()
     )
+    if not (user.is_admin or user.is_ta):
+        query = query.filter(Enrollment.paid.is_(True))
+    return query.order_by(LiveClass.starts_at.asc()).all()

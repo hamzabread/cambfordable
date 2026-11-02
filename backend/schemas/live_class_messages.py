@@ -10,6 +10,8 @@ class LiveChatMessageOut(BaseModel):
     user_id: int
     message: str
     created_at: datetime
+    is_admin: bool
+    sender_name: str
 
     class Config:
         from_attributes = True

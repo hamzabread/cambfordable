@@ -1,4 +1,4 @@
-from fastapi import WebSocket, WebSocketDisconnect, Depends, APIRouter
+from fastapi import WebSocket, WebSocketDisconnect, Depends, APIRouter, HTTPException
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from database import get_db
@@ -41,48 +41,71 @@ def build_question_stats(question_state: dict) -> dict:
     }
 
 
+async def dispatch_local(live_class_id: int, payload: dict):
+    """Send an event to this process's sockets for the class, honouring its visibility."""
+    event_type = payload.get("event_type", "chat")
+    visibility = payload.get("visibility", "chat_filter")
+    target_user_id = payload.get("target_user_id")
+
+    for conn in list(active_connections.get(live_class_id, [])):
+        if visibility == "all":
+            deliver = True
+        elif visibility == "admins":
+            deliver = conn["is_admin"]
+        elif visibility == "user":
+            deliver = target_user_id == conn["user_id"]
+        elif visibility == "chat_filter" and event_type == "chat":
+            # Students see instructor messages and their own.
+            deliver = conn["is_admin"] or payload.get("is_admin") or payload.get("user_id") == conn["user_id"]
+        else:
+            deliver = False
+        if not deliver:
+            continue
+        try:
+            await conn["ws"].send_json(payload)
+        except Exception:
+            # The socket went away; its own handler cleans up.
+            pass
+
+
 async def publish_event(live_class_id: int, payload: dict):
-    await redis_client.publish(
-        chat_channel(live_class_id),
-        json.dumps(payload)
-    )
-
-async def redis_listener(live_class_id: int):
-    pubsub = redis_client.pubsub()
-    await pubsub.subscribe(chat_channel(live_class_id))
-
     try:
-        async for message in pubsub.listen():
-            if message["type"] != "message":
-                continue
+        await redis_client.publish(chat_channel(live_class_id), json.dumps(payload))
+    except Exception:
+        # Redis is down: still reach everyone connected to this process.
+        await dispatch_local(live_class_id, payload)
 
-            payload = json.loads(message["data"])
-            event_type = payload.get("event_type", "chat")
-            visibility = payload.get("visibility", "chat_filter")
-            target_user_id = payload.get("target_user_id")
 
-            # Broadcast to all connected users, but each client decides what to show
-            for conn in active_connections.get(live_class_id, []):
-                # Broadcast event to all connected users
-                if visibility == "all":
-                    await conn["ws"].send_json(payload)
-                # Broadcast only to admins
-                elif visibility == "admins" and conn["is_admin"]:
-                    await conn["ws"].send_json(payload)
-                # Broadcast only to a specific user
-                elif visibility == "user" and target_user_id == conn["user_id"]:
-                    await conn["ws"].send_json(payload)
-                # Backward-compatible chat filtering behavior
-                elif visibility == "chat_filter" and event_type == "chat":
-                    if conn["is_admin"]:
-                        await conn["ws"].send_json(payload)
-                    elif payload.get("is_admin") or payload.get("user_id") == conn["user_id"]:
-                        await conn["ws"].send_json(payload)
+async def redis_listener(live_class_id: int, ready: asyncio.Event):
+    """Relay Redis events to local sockets, resubscribing after an outage.
+    `ready` is set once the first subscription attempt has finished."""
+    while live_class_id in active_connections:
+        pubsub = redis_client.pubsub()
+        try:
+            await pubsub.subscribe(chat_channel(live_class_id))
+            ready.set()
+            async for message in pubsub.listen():
+                if message["type"] != "message":
+                    continue
+                await dispatch_local(live_class_id, json.loads(message["data"]))
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            ready.set()
+            await asyncio.sleep(2)
+        finally:
+            try:
+                await pubsub.unsubscribe(chat_channel(live_class_id))
+                await pubsub.close()
+            except Exception:
+                pass
 
-    finally:
-        await pubsub.unsubscribe(chat_channel(live_class_id))
-        await pubsub.close()
 
+async def send_error(websocket: WebSocket, detail: str):
+    await websocket.send_json({"event_type": "error", "detail": detail})
+
+
+MAX_CHAT_LENGTH = 2000
 
 
 @router.websocket("/ws/live-classes/{live_class_id}/chat")
@@ -110,10 +133,13 @@ async def live_class_chat(
     # ✅ Authorization rules
     # ✅ Authorization rules
     if not user.is_admin:
-        enrollment = db.query(Enrollment).filter(
+        enrollment_query = db.query(Enrollment).filter(
             Enrollment.user_id == user.id,
-            Enrollment.course_id == live_class.course_id
-        ).first()
+            Enrollment.course_id == live_class.course_id,
+        )
+        if not user.is_ta:
+            enrollment_query = enrollment_query.filter(Enrollment.paid.is_(True))
+        enrollment = enrollment_query.first()
 
         if not enrollment:
             print(f"User {user.id} denied: No enrollment for class {live_class_id}")
@@ -129,9 +155,15 @@ async def live_class_chat(
     # ✅ Register connection — OUTSIDE the if not user.is_admin block
     if live_class_id not in active_connections:
         active_connections[live_class_id] = []
+        ready = asyncio.Event()
         redis_tasks[live_class_id] = asyncio.create_task(
-            redis_listener(live_class_id)
+            redis_listener(live_class_id, ready)
         )
+        # Messages published before the subscription exists would be lost.
+        try:
+            await asyncio.wait_for(ready.wait(), timeout=3)
+        except asyncio.TimeoutError:
+            pass
 
     active_connections[live_class_id].append({
         "ws": websocket,
@@ -171,6 +203,14 @@ async def live_class_chat(
             except JSONDecodeError:
                 parsed_data = None
 
+            # Chat arrives as {"action": "chat_message", "message": ...}, so text
+            # that merely looks like a command is still saved as chat. Plain
+            # text from older clients is chat too.
+            chat_text = data
+            if isinstance(parsed_data, dict) and parsed_data.get("action") == "chat_message":
+                chat_text = str(parsed_data.get("message", ""))
+                parsed_data = None
+
             # Handle phase-1 live question events
             if isinstance(parsed_data, dict) and parsed_data.get("action"):
                 action = parsed_data["action"]
@@ -180,29 +220,38 @@ async def live_class_chat(
                         continue
 
                     question = str(parsed_data.get("question", "")).strip()
-                    options = parsed_data.get("options", [])
+                    raw_options = parsed_data.get("options", [])
                     correct_option = parsed_data.get("correct_option")
 
-                    if (
-                        not question
-                        or not isinstance(options, list)
-                        or len(options) < 2
-                        or not all(str(opt).strip() for opt in options)
-                    ):
+                    if not isinstance(raw_options, list):
+                        await send_error(websocket, "The question's options weren't understood.")
                         continue
-
                     try:
                         correct_option = int(correct_option)
                     except (TypeError, ValueError):
+                        await send_error(websocket, "Choose the correct option.")
                         continue
+                    # Blank options are skipped, and the correct answer's index
+                    # is remapped onto the options that remain.
+                    kept = [(index, str(opt).strip()) for index, opt in enumerate(raw_options) if str(opt).strip()]
+                    options = [text for _, text in kept]
+                    original_indexes = [index for index, _ in kept]
 
-                    if correct_option < 0 or correct_option >= len(options):
+                    if not question:
+                        await send_error(websocket, "Write a question first.")
                         continue
+                    if len(options) < 2:
+                        await send_error(websocket, "A question needs at least two options.")
+                        continue
+                    if correct_option not in original_indexes:
+                        await send_error(websocket, "The correct option can't be blank.")
+                        continue
+                    correct_option = original_indexes.index(correct_option)
 
                     question_state = {
                         "id": int(time() * 1000),
                         "question": question,
-                        "options": [str(opt).strip() for opt in options],
+                        "options": options,
                         "correct_option": correct_option,
                         "responses": {},
                         "is_active": True,
@@ -312,10 +361,18 @@ async def live_class_chat(
                             })
                     continue
 
+            chat_text = chat_text.strip()
+            if not chat_text:
+                continue
+            if len(chat_text) > MAX_CHAT_LENGTH:
+                await send_error(websocket, f"Messages can be at most {MAX_CHAT_LENGTH} characters.")
+                continue
+
             # ⏱ Rate limiting: 1 msg/sec per user
             now_ts = time()
             last_ts = rate_limit.get(user.id, 0)
             if now_ts - last_ts < 1.0:
+                await send_error(websocket, "You're sending messages too quickly. Wait a second and try again.")
                 continue
             rate_limit[user.id] = now_ts
 
@@ -324,7 +381,7 @@ async def live_class_chat(
                 db,
                 live_class_id=live_class_id,
                 user_id=user.id,
-                message=data,
+                message=chat_text,
                 is_admin=user.is_admin
             )
 
@@ -336,6 +393,7 @@ async def live_class_chat(
                 "message": msg.message,
                 "created_at": msg.created_at.isoformat(),
                 "is_admin": user.is_admin,
+                "sender_name": user.full_name or user.username,
             }
 
             await publish_event(live_class_id, payload)
@@ -343,13 +401,17 @@ async def live_class_chat(
 
 
     except WebSocketDisconnect:
-        active_connections[live_class_id] = [
-            c for c in active_connections[live_class_id]
+        pass
+    finally:
+        # Runs on any exit, including errors, so a dead socket never lingers.
+        remaining = [
+            c for c in active_connections.get(live_class_id, [])
             if c["ws"] != websocket
         ]
-
-        if not active_connections[live_class_id]:
-            del active_connections[live_class_id]
+        if remaining:
+            active_connections[live_class_id] = remaining
+        else:
+            active_connections.pop(live_class_id, None)
             active_questions.pop(live_class_id, None)
 
             task = redis_tasks.pop(live_class_id, None)
@@ -364,8 +426,34 @@ def get_chat_history(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    live_class = db.query(LiveClass).filter(LiveClass.id == live_class_id).first()
+    if not live_class:
+        raise HTTPException(status_code=404, detail="Class not found")
+    if not user.is_admin:
+        enrollment_query = db.query(Enrollment).filter(
+            Enrollment.user_id == user.id,
+            Enrollment.course_id == live_class.course_id,
+        )
+        if not user.is_ta:
+            enrollment_query = enrollment_query.filter(Enrollment.paid.is_(True))
+        if not enrollment_query.first():
+            raise HTTPException(status_code=403, detail="You do not have access to this class")
+
     messages = get_live_chat_messages(db, live_class_id)
     if user.is_admin:
-        return messages
-    # Students only see admin messages and their own
-    return [m for m in messages if m.user_id == user.id or m.is_admin]
+        visible = messages
+    else:
+        # Students only see instructor messages and their own private thread.
+        visible = [m for m in messages if m.user_id == user.id or m.is_admin]
+    return [
+        {
+            "id": message.id,
+            "live_class_id": message.live_class_id,
+            "user_id": message.user_id,
+            "message": message.message,
+            "created_at": message.created_at,
+            "is_admin": message.is_admin,
+            "sender_name": message.user.full_name or message.user.username,
+        }
+        for message in visible
+    ]
