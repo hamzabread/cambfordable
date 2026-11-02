@@ -16,3 +16,4 @@ class QuizSubmit(BaseModel):
 class GradeQuiz(BaseModel):
     submission_id: int
     score: int
+    remarks: Optional[str] = None

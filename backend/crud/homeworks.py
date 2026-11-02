@@ -50,6 +50,7 @@ def grade_homework_submission(db: Session, payload: HomeworkGrade):
     
     submission.remark = payload.remark
     submission.score = payload.score
+    submission.graded_at = datetime.now(timezone.utc) if payload.score is not None else None
     db.commit()
     db.refresh(submission)
     return submission

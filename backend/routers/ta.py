@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
+from datetime import datetime, timezone
 
 from database import get_db
 from core.security import get_current_user
@@ -11,6 +12,7 @@ from models.homeworks import HomeworkSubmission
 from models.quiz import Quiz
 from models.homeworks import Homework
 from models.courses import Course
+from crud.notifications import notify_grade_update
 
 router = APIRouter(prefix="/ta", tags=["TA"])
 
@@ -164,13 +166,27 @@ def grade_quiz_submission(
             status_code=403,
             detail="You don't have permission to grade this submission",
         )
+
+    if score < 0 or score > quiz.total_marks:
+        raise HTTPException(status_code=422, detail=f"Score must be between 0 and {quiz.total_marks}")
     
-    # Update the submission
+    old_score, old_remark = submission.score, submission.remarks
     submission.score = score
+    submission.graded_at = datetime.now(timezone.utc)
     if remarks:
         submission.remarks = remarks
     
     db.commit()
+    notify_grade_update(
+        db,
+        user_id=submission.user_id,
+        item_kind="Quiz",
+        item_title=quiz.title,
+        old_score=old_score,
+        new_score=submission.score,
+        old_remark=old_remark,
+        new_remark=submission.remarks,
+    )
     return {"message": "Submission graded successfully", "submission_id": submission_id}
 
 
@@ -213,11 +229,25 @@ def grade_homework_submission(
             status_code=403,
             detail="You don't have permission to grade this submission",
         )
+
+    if score < 0 or score > homework.max_score:
+        raise HTTPException(status_code=422, detail=f"Score must be between 0 and {homework.max_score}")
     
-    # Update the submission
+    old_score, old_remark = submission.score, submission.remark
     submission.score = score
+    submission.graded_at = datetime.now(timezone.utc)
     if remark:
         submission.remark = remark
     
     db.commit()
+    notify_grade_update(
+        db,
+        user_id=submission.user_id,
+        item_kind="Assignment",
+        item_title=homework.title,
+        old_score=old_score,
+        new_score=submission.score,
+        old_remark=old_remark,
+        new_remark=submission.remark,
+    )
     return {"message": "Submission graded successfully", "submission_id": submission_id}

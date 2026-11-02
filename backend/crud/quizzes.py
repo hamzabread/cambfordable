@@ -11,6 +11,7 @@ def create_quiz(db: Session, quiz_in: QuizCreate):
         course_id=quiz_in.course_id,
         title=quiz_in.title,
         total_marks=quiz_in.total_marks,
+        duration_minutes=quiz_in.duration_minutes,
         deadline=quiz_in.deadline,
         allow_late=quiz_in.allow_late
     )
@@ -47,6 +48,7 @@ def create_quiz(db: Session, quiz_in: QuizCreate):
         "title": quiz.title,
         "course_id": quiz.course_id,
         "total_marks": quiz.total_marks,
+        "duration_minutes": quiz.duration_minutes,
         "deadline": quiz.deadline,
         "allow_late": quiz.allow_late,
         "questions": [
@@ -71,6 +73,7 @@ def list_course_quizzes(db: Session, course_id: int):
             "id": q.id,
             "title": q.title,
             "total_marks": q.total_marks,
+            "duration_minutes": q.duration_minutes,
             "course_id": q.course_id,
             "deadline": q.deadline,
             "allow_late": q.allow_late,
@@ -85,14 +88,12 @@ def get_quiz_for_student(db: Session, quiz_id: int):
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
 
-    # 2️⃣ Dynamically check if the quiz should be published
+    # 2️⃣ A quiz past its deadline stays open only when late work is allowed.
     now = datetime.now(timezone.utc)
-    is_published = quiz.is_published
-    if quiz.deadline and now > quiz.deadline:
-        is_published = False
-
-    if not is_published:
-        raise HTTPException(status_code=403, detail="Quiz not published yet or deadline has passed")
+    is_late = bool(quiz.deadline and now > quiz.deadline)
+    if is_late and not quiz.allow_late:
+        raise HTTPException(status_code=403, detail="This quiz closed at its deadline and doesn't accept late submissions.")
+    is_published = True
 
     # 3️⃣ Prepare questions for student (hide correct options)
     questions = []
@@ -117,8 +118,10 @@ def get_quiz_for_student(db: Session, quiz_id: int):
         "course_id": quiz.course_id,
         "title": quiz.title,
         "total_marks": quiz.total_marks,
+        "duration_minutes": quiz.duration_minutes,
         "deadline": quiz.deadline,
         "is_published": is_published,
         "allow_late": quiz.allow_late,
+        "is_late": is_late,
         "questions": questions
     }

@@ -3,13 +3,59 @@ from models.quiz import Quiz
 from models.quiz_submission import QuizSubmission
 from models.quiz_answer import QuizAnswer
 from models.quiz_option import QuizOption
+from models.quiz_attempt import QuizAttempt
+from routers.uploads import quiz_answer_prefix
 from schemas.quiz_submissions import QuizSubmit, GradeQuiz
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException
 
 # Thresholds for flagging suspicious activity
 TAB_SWITCH_THRESHOLD = 2
 FULLSCREEN_EXIT_THRESHOLD = 1
+
+# Slack for network delay after the countdown reaches zero.
+TIME_LIMIT_GRACE = timedelta(minutes=2)
+
+
+def _validate_answers(db: Session, quiz: Quiz, user_id: int, payload: QuizSubmit) -> None:
+    """Every answer must belong to this quiz, every option to its question,
+    and every file to this student's own quiz-answer uploads."""
+    questions = {question.id: question for question in quiz.questions}
+    seen: set[int] = set()
+    own_prefix = f"/uploads/quiz_answers/{quiz_answer_prefix(user_id)}"
+    for answer in payload.answers:
+        question = questions.get(answer.question_id)
+        if question is None:
+            raise HTTPException(status_code=422, detail="An answer refers to a question that isn't in this quiz.")
+        if answer.question_id in seen:
+            raise HTTPException(status_code=422, detail="A question was answered more than once.")
+        seen.add(answer.question_id)
+
+        if question.is_mcq:
+            if answer.uploaded_file_url:
+                raise HTTPException(status_code=422, detail="Multiple-choice questions take an option, not a file.")
+            if answer.selected_option_id is not None and answer.selected_option_id not in {
+                option.id for option in question.options
+            }:
+                raise HTTPException(status_code=422, detail="An answer picks an option from a different question.")
+        else:
+            if answer.selected_option_id is not None:
+                raise HTTPException(status_code=422, detail="File questions take a file, not an option.")
+            url = answer.uploaded_file_url
+            if url and (not url.startswith(own_prefix) or "/" in url[len("/uploads/quiz_answers/"):]):
+                raise HTTPException(status_code=422, detail="Attach a file you uploaded for this quiz.")
+
+
+def _is_over_time(db: Session, quiz: Quiz, user_id: int, now: datetime) -> bool:
+    attempt = db.query(QuizAttempt).filter(
+        QuizAttempt.quiz_id == quiz.id,
+        QuizAttempt.user_id == user_id,
+    ).first()
+    if not attempt:
+        return False
+    started_at = attempt.started_at if attempt.started_at.tzinfo else attempt.started_at.replace(tzinfo=timezone.utc)
+    return now > started_at + timedelta(minutes=quiz.duration_minutes) + TIME_LIMIT_GRACE
+
 
 def submit_quiz(db: Session, user_id: int, payload: QuizSubmit):
     # Check for existing submission
@@ -40,11 +86,15 @@ def submit_quiz(db: Session, user_id: int, payload: QuizSubmit):
                 )
             is_late = True
 
+    _validate_answers(db, quiz, user_id, payload)
+    over_time = _is_over_time(db, quiz, user_id, now)
+
     # Determine if submission should be flagged for review
     flagged = (
-        payload.tab_switches > TAB_SWITCH_THRESHOLD or 
+        payload.tab_switches > TAB_SWITCH_THRESHOLD or
         payload.fullscreen_exits > FULLSCREEN_EXIT_THRESHOLD or
-        payload.auto_submitted
+        payload.auto_submitted or
+        over_time
     )
 
     submission = QuizSubmission(
@@ -67,6 +117,7 @@ def submit_quiz(db: Session, user_id: int, payload: QuizSubmit):
         if ans.uploaded_file_url:
             try:
                 filename = ans.uploaded_file_url.split("/")[-1]
+                filename = filename.removeprefix(quiz_answer_prefix(user_id))
                 parts = filename.rsplit("_", 1)
                 if len(parts) == 2:
                     name_part = parts[0]
@@ -95,6 +146,7 @@ def submit_quiz(db: Session, user_id: int, payload: QuizSubmit):
     return {
         "submission_id": submission.id,
         "is_late": is_late,
+        "over_time": over_time,
         "flagged_for_review": flagged,
         "message": "Quiz submitted" + (" (flagged for review)" if flagged else "")
     }
@@ -149,6 +201,9 @@ def grade_submission(db: Session, payload: GradeQuiz):
         return {"error": "Submission not found"}
 
     submission.score = payload.score
+    submission.graded_at = datetime.now(timezone.utc)
+    if payload.remarks is not None:
+        submission.remarks = payload.remarks.strip() or None
     db.commit()
 
     return {"message": "Score updated"}
