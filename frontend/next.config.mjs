@@ -1,19 +1,24 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Required for Zoom WebAssembly (WASM) to work
+  // Lets a second browser session on 127.0.0.1 use the dev server (HMR and
+  // hydration are blocked for other origins otherwise).
+  allowedDevOrigins: ["127.0.0.1"],
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: "/(.*)",
         headers: [
-          { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' },
-          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          // Required for Zoom WebAssembly (SharedArrayBuffer).
+          { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=()" },
         ],
       },
     ];
   },
-  // If you see issues with the Zoom SDK's internal dependencies, add this:
-  transpilePackages: ['@zoom/meetingsdk'],
 };
 
 export default nextConfig;

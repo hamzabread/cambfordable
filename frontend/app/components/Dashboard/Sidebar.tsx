@@ -1,178 +1,140 @@
 "use client";
 
-import React from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
-  Home,
   BookOpen,
-  Calendar,
-  BarChart3,
-  FileText,
-  MessageSquare,
-  User,
-  LogOut,
+  CalendarDays,
+  CircleHelp,
+  FileCheck2,
+  ChartNoAxesColumnIncreasing,
+  GraduationCap,
+  LayoutDashboard,
+  MessageSquareText,
+  Plus,
+  Settings,
+  Sparkles,
   X,
-  Menu,
 } from "lucide-react";
 
 interface SidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
+  role?: "admin" | "ta" | "student";
 }
 
-const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
-  const router = useRouter();
+const studentMenu = [
+  { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  { label: "Courses", icon: GraduationCap, href: "/courses" },
+  { label: "Assignments", icon: FileCheck2, href: "/homework" },
+  { label: "Quizzes", icon: BookOpen, href: "/quizzes" },
+  { label: "Results", icon: ChartNoAxesColumnIncreasing, href: "/results" },
+  { label: "Messages", icon: MessageSquareText, href: "/messages" },
+  { label: "Schedule", icon: CalendarDays, href: "/schedule" },
+];
+
+// Staff don't have results of their own; their work is on these pages.
+const adminMenu = [
+  { label: "Admin dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  { label: "Assignments", icon: FileCheck2, href: "/homework" },
+  { label: "Quizzes", icon: BookOpen, href: "/quizzes" },
+  { label: "Messages", icon: MessageSquareText, href: "/messages" },
+  { label: "Schedule", icon: CalendarDays, href: "/schedule" },
+];
+
+const taMenu = [
+  { label: "Grading", icon: LayoutDashboard, href: "/dashboard" },
+  { label: "Assignments", icon: FileCheck2, href: "/homework" },
+  { label: "Quizzes", icon: BookOpen, href: "/quizzes" },
+  { label: "Messages", icon: MessageSquareText, href: "/messages" },
+  { label: "Schedule", icon: CalendarDays, href: "/schedule" },
+];
+
+export default function Sidebar({ sidebarOpen, setSidebarOpen, role = "student" }: SidebarProps) {
   const pathname = usePathname();
-
-  const menuItems = [
-    { label: "Dashboard", icon: Home, href: "/dashboard" },
-    { label: "My Courses", icon: BookOpen, href: "/courses" },
-    { label: "Class Schedule", icon: Calendar, href: "/schedule" },
-    { label: "Quizzes", icon: BarChart3, href: "/quizzes" },
-    { label: "Homework", icon: FileText, href: "/homework" },
-    { label: "Messages", icon: MessageSquare, href: "/messages" },
-    { label: "Profile", icon: User, href: "/profile" },
-  ];
-
-  const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    router.push("/login");
-  };
-
-  const handleNavClick = () => {
-    setSidebarOpen(false);
-  };
-
-  // Get current page label for breadcrumb
-  const getCurrentLabel = () => {
-    const item = menuItems.find((m) => m.href === pathname);
-    return item?.label || "Dashboard";
-  };
+  const menuItems = role === "admin" ? adminMenu : role === "ta" ? taMenu : studentMenu;
 
   return (
-    <>
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-64 bg-linear-to-b from-slate-900 to-slate-800 text-white flex-col h-screen shadow-xl">
-        {/* Logo */}
-        <div className="p-6 border-b border-slate-700">
-          <Link href="/">
-          <h1 className="text-2xl font-bold">Cambfordable</h1>
-          </Link>
-        </div>
-
-        {/* Navigation Menu */}
-        <nav className="flex-1 px-4 py-6 space-y-2">
-          {menuItems.map((item) => {
-            const isActive = pathname === item.href;
-            const Icon = item.icon;
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition duration-200 ${
-                  isActive
-                    ? "bg-slate-700 text-white"
-                    : "text-slate-300 hover:bg-slate-700 hover:text-white"
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Logout Button */}
-        <div className="p-4 border-t border-slate-700">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-red-600 hover:text-white transition duration-200 font-medium"
-          >
-            <LogOut className="w-5 h-5" />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Mobile Breadcrumb Navigation */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-slate-200 shadow-sm z-40 ">
-        <div className="px-4 py-3 flex items-center gap-3">
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition"
-            aria-label="Toggle sidebar"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          <div className="flex items-center gap-2 text-sm">
-            <Home className="w-4 h-4 text-slate-600" />
-            <span className="text-slate-600">/</span>
-            <span className="font-semibold text-slate-900">
-              {getCurrentLabel()}
-            </span>
-          </div>
-        </div>
+    <aside
+      className={`fixed inset-y-0 left-0 z-50 flex w-[252px] shrink-0 flex-col bg-[#081b33] px-4 py-5 text-white shadow-2xl transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 lg:shadow-none ${
+        sidebarOpen ? "translate-x-0" : "-translate-x-full"
+      }`}
+    >
+      <div className="mb-7 flex items-start justify-between px-1">
+        <Link href="/" className="flex items-center gap-3" onClick={() => setSidebarOpen(false)}>
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#0866ef]">
+            <GraduationCap className="h-6 w-6" strokeWidth={2.2} />
+          </span>
+          <span>
+            <span className="block text-[17px] font-bold tracking-tight">Cambfordable</span>
+            <span className="block text-[10px] font-medium text-slate-400">Learning without limits</span>
+          </span>
+        </Link>
+        <button
+          type="button"
+          className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden"
+          aria-label="Close navigation"
+          onClick={() => setSidebarOpen(false)}
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
-      {/* Mobile Sidebar */}
-      <aside
-        className={`fixed top-0 left-0 w-64 h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-white flex flex-col shadow-xl lg:hidden z-50 transition-transform duration-300 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        {/* Logo & Close Button */}
-        <div className="p-6 border-b border-slate-700 flex items-center justify-between">
-          <Link href="/">
-          <h1 className="text-2xl font-bold">Cambfordable</h1>
-          </Link>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="p-2 hover:bg-slate-700 rounded-lg transition"
-            aria-label="Close sidebar"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
+      {role === "student" && (
+        <Link
+          href="/contact"
+          onClick={() => setSidebarOpen(false)}
+          className="mb-6 flex h-11 items-center justify-center gap-2 rounded-lg bg-[#0874f9] text-sm font-bold shadow-lg shadow-blue-950/20 transition hover:bg-[#0866e5]"
+        >
+          <Plus className="h-4 w-4" strokeWidth={3} />
+          Contact admissions
+        </Link>
+      )}
 
-        {/* Navigation Menu */}
-        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-          {menuItems.map((item) => {
-            const isActive = pathname === item.href;
-            const Icon = item.icon;
+      <nav className="space-y-1" aria-label="Portal navigation">
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setSidebarOpen(false)}
+              className={`flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold transition ${
+                active
+                  ? "bg-[#0874f9] text-white shadow-md shadow-blue-950/20"
+                  : "text-slate-400 hover:bg-white/7 hover:text-white"
+              }`}
+            >
+              <Icon className="h-[17px] w-[17px]" />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={handleNavClick}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition duration-200 ${
-                  isActive
-                    ? "bg-slate-700 text-white"
-                    : "text-slate-300 hover:bg-slate-700 hover:text-white"
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Logout Button */}
-        <div className="p-4 border-t border-slate-700">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-red-600 hover:text-white transition duration-200 font-medium"
-          >
-            <LogOut className="w-5 h-5" />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
-    </>
+      <div className="mt-auto border-t border-white/10 pt-4">
+        <Link
+          href="/profile"
+          onClick={() => setSidebarOpen(false)}
+          className={`mb-1 flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold transition ${
+            pathname === "/profile"
+              ? "bg-[#0874f9] text-white"
+              : "text-slate-400 hover:bg-white/7 hover:text-white"
+          }`}
+        >
+          <Settings className="h-[17px] w-[17px]" />
+          Profile and settings
+        </Link>
+        <Link
+          href="/contact"
+          className="flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold text-slate-400 transition hover:bg-white/7 hover:text-white"
+        >
+          <CircleHelp className="h-[17px] w-[17px]" />
+          Help
+          <Sparkles className="ml-auto h-3.5 w-3.5 text-blue-400" />
+        </Link>
+      </div>
+    </aside>
   );
-};
-
-export default Sidebar;
+}
