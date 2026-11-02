@@ -1,6 +1,8 @@
 'use client';
 import React, { useState } from 'react';
+import axios from 'axios';
 import { Phone, MapPin, Mail, Send } from 'lucide-react';
+import { API_URL, getApiError } from '@/lib/portal';
 import Footer from '../components/Landing/Footer/Footer';
 import Header from '../components/Landing/Header/Header';
 
@@ -17,7 +19,7 @@ export default function ContactForm() {
     email: '',
     message: ''
   });
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
 
@@ -50,24 +52,37 @@ export default function ContactForm() {
     }));
   };
 
-  const handleSubmit = () => {
-    if (!formData.name || !formData.email || !formData.message) {
+  const handleSubmit = async () => {
+    const name = formData.name.trim();
+    const email = formData.email.trim();
+    const message = formData.message.trim();
+
+    if (!name || !email || !message) {
       setSubmitMessage('Please fill in all fields');
       return;
     }
-    
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setSubmitMessage('Please enter a valid email address');
+      return;
+    }
+
     setIsSubmitting(true);
-    
-    // Simulate form submission
-    setTimeout(() => {
+    setSubmitMessage('');
+
+    try {
+      await axios.post(`${API_URL}/contact`, { name, email, message });
       setSubmitMessage('Thank you! We will get back to you soon.');
       setFormData({ name: '', email: '', message: '' });
-      setIsSubmitting(false);
-      
+
       setTimeout(() => {
         setSubmitMessage('');
       }, 5000);
-    }, 1500);
+    } catch (error) {
+      setSubmitMessage(getApiError(error, 'Your message could not be sent. Please try again.'));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -143,12 +158,15 @@ export default function ContactForm() {
                 {/* Name and Email Row */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    <label htmlFor="contact-name" className="block text-sm font-semibold text-gray-900 mb-2">
                       Name*
                     </label>
                     <input
+                      id="contact-name"
                       type="text"
                       name="name"
+                      autoComplete="name"
+                      maxLength={120}
                       value={formData.name}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border-b-2 border-gray-300 focus:border-emerald-500 bg-transparent outline-none transition-colors text-gray-900 placeholder-gray-500"
@@ -156,12 +174,14 @@ export default function ContactForm() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    <label htmlFor="contact-email" className="block text-sm font-semibold text-gray-900 mb-2">
                       Email*
                     </label>
                     <input
+                      id="contact-email"
                       type="email"
                       name="email"
+                      autoComplete="email"
                       value={formData.email}
                       onChange={handleChange}
                       className="w-full px-4 py-3 border-b-2 border-gray-300 focus:border-emerald-500 bg-transparent outline-none transition-colors text-gray-900 placeholder-gray-500"
@@ -172,11 +192,13 @@ export default function ContactForm() {
 
                 {/* Message */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  <label htmlFor="contact-message" className="block text-sm font-semibold text-gray-900 mb-2">
                     Message*
                   </label>
                   <textarea
+                    id="contact-message"
                     name="message"
+                    maxLength={5000}
                     value={formData.message}
                     onChange={handleChange}
                     rows={5}
@@ -193,13 +215,13 @@ export default function ContactForm() {
                     className="bg-[#1e3557] hover:bg-[#152848] disabled:bg-gray-400 text-white font-semibold py-3 px-8 rounded-full transition-all duration-300 transform hover:translate-y-[-2px] shadow-lg hover:shadow-xl flex items-center gap-2 group"
                   >
                     {isSubmitting ? 'SENDING...' : 'SEND NOW'}
-                    <Send className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    <Send className="w-4 h-4 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
                   </button>
                 </div>
 
                 {/* Success Message */}
                 {submitMessage && (
-                  <div className={`p-4 rounded-lg ${submitMessage.includes('Thank') ? 'bg-emerald-100 border-l-4 border-emerald-500' : 'bg-red-100 border-l-4 border-red-500'}`}>
+                  <div className={`p-4 rounded-lg ${submitMessage.includes('Thank') ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
                     <p className={submitMessage.includes('Thank') ? 'text-emerald-800' : 'text-red-800'}>
                       {submitMessage}
                     </p>

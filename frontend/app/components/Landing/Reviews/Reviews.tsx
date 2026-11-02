@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { Star } from 'lucide-react';
+import { MaskedHeading, Reveal } from '../../Motion/Motion';
 
 export default function StudentsReviews() {
   const reviews = [
@@ -69,16 +70,21 @@ export default function StudentsReviews() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16">
-          <h1 className="text-4xl sm:text-5xl font-bold text-[#FBF9F6] mb-4">
-            What Our Students Say
-          </h1>
-          <p className="text-lg text-slate-300 max-w-2xl mx-auto">
-            Join hundreds of satisfied students who have achieved their academic goals
-          </p>
+          <MaskedHeading
+            as="h2"
+            trigger="view"
+            text="What Our Students Say"
+            className="text-4xl sm:text-5xl font-bold tracking-[-0.02em] text-[#FBF9F6] mb-4"
+          />
+          <Reveal delay={0.3}>
+            <p className="text-lg text-slate-300 max-w-2xl mx-auto">
+              Join hundreds of satisfied students who have achieved their academic goals
+            </p>
+          </Reveal>
         </div>
 
-        {/* Marquee */}
-        <div className="relative">
+        {/* Marquee, faded at both edges so cards glide in rather than being cut off */}
+        <Reveal variant="fade" duration={1} className="relative [mask-image:linear-gradient(90deg,transparent,black_8%,black_92%,transparent)]">
           <div className="marquee-track flex gap-6 w-max">
             {marqueeReviews.map((review, idx) => (
               <div
@@ -97,7 +103,7 @@ export default function StudentsReviews() {
 
                 {/* Review Text */}
                 <p className="text-slate-100 text-sm leading-relaxed mb-6 min-h-23">
-                  "{review.review}"
+                  &ldquo;{review.review}&rdquo;
                 </p>
 
                 {/* Student Info */}
@@ -108,7 +114,7 @@ export default function StudentsReviews() {
               </div>
             ))}
           </div>
-        </div>
+        </Reveal>
       </div>
 
       <style jsx>{`

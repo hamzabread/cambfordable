@@ -41,6 +41,50 @@
 
 body {
   font-family: var(--font-body);
+  color: #0a1d35;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled),
+[role="button"]:not(:disabled) {
+  cursor: pointer;
+}
+
+::selection {
+  background: #bfdbfe;
+  color: #08203c;
+}
+
+html {
+  scrollbar-color: #9fb3cc #f3f6fa;
+}
+
+:focus-visible {
+  outline: 2px solid #1b96d8;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+h1,
+h2 {
+  text-wrap: balance;
+}
+
+/* Looping decoration (marquee, pulses) stops for people who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-scroll-x,
+  .marquee-track,
+  .animate-pulse,
+  .animate-ping {
+    animation: none !important;
+  }
 }
 
 h1,

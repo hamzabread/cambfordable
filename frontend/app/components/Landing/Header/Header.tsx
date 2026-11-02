@@ -1,26 +1,24 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { logout } from "@/lib/auth";
+
+// Signed-in state lives in localStorage; storage events keep other tabs in step.
+const subscribeToStorage = (onChange: () => void) => {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+};
+const readSignedIn = () => Boolean(localStorage.getItem("access_token"));
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const isLoggedIn = useSyncExternalStore(subscribeToStorage, readSignedIn, () => false);
   const pathname = usePathname();
 
   const isHome = pathname !== "/login" && pathname !== "/signup";
 
-  // Check if user is logged in
-  useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    setIsLoggedIn(!!token);
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    setIsLoggedIn(false);
-    window.location.href = "/";
-  };
+  const handleLogout = () => logout();
 
   return (
     <>
@@ -69,7 +67,7 @@ const Header = () => {
                       Dashboard
                     </button>
                   </Link>
-                  <button 
+                  <button
                     onClick={handleLogout}
                     className="p-4 py-1.5 cursor-pointer text-[18px] border border-white/50 text-white rounded-md hover:bg-white/10 transition"
                   >
@@ -83,9 +81,11 @@ const Header = () => {
                       Login
                     </button>
                   </Link>
-                  <button className="p-4 py-1.5 cursor-pointer text-[18px] border border-white/50 text-white rounded-md">
-                    Join
-                  </button>
+                  <Link href="/signup">
+                    <button className="p-4 py-1.5 cursor-pointer text-[18px] border border-white/50 text-white rounded-md">
+                      Join
+                    </button>
+                  </Link>
                 </>
               )}
             </div>
@@ -94,12 +94,12 @@ const Header = () => {
 
         {/* Mobile Nav */}
         <nav className="flex md:hidden justify-between items-center">
-          <a href="/">
+          <Link href="/">
             <p className="text-white font-semibold text-xl">Cambfordable</p>
-          </a>
+          </Link>
 
           <div className="flex items-center gap-4">
-            <button onClick={() => setIsOpen(true)}>
+            <button onClick={() => setIsOpen(true)} aria-label="Open menu" aria-expanded={isOpen}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="36"
@@ -144,6 +144,7 @@ const Header = () => {
               <p className="text-white font-bold text-xl">Cambfordable</p>
               <button
                 onClick={() => setIsOpen(false)}
+                aria-label="Close menu"
                 className="text-white text-2xl"
               >
                 ✕
@@ -200,7 +201,7 @@ const Header = () => {
                         Dashboard
                       </button>
                     </Link>
-                    <button 
+                    <button
                       onClick={() => {
                         handleLogout();
                         setIsOpen(false);
@@ -212,12 +213,16 @@ const Header = () => {
                   </>
                 ) : (
                   <>
-                    <button className="w-full bg-[#FBF9F6] rounded-md px-5 py-3 text-[#1e3557] font-semibold">
-                      Login
-                    </button>
-                    <button className="w-full border border-white/50 text-white rounded-md px-5 py-3 font-semibold">
-                      Join
-                    </button>
+                    <Link href="/login" onClick={() => setIsOpen(false)}>
+                      <button className="w-full bg-[#FBF9F6] rounded-md px-5 py-3 text-[#1e3557] font-semibold">
+                        Login
+                      </button>
+                    </Link>
+                    <Link href="/signup" onClick={() => setIsOpen(false)}>
+                      <button className="w-full border border-white/50 text-white rounded-md px-5 py-3 font-semibold">
+                        Join
+                      </button>
+                    </Link>
                   </>
                 )}
               </div>

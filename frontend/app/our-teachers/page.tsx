@@ -2,17 +2,22 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Award,
   BookOpen,
   BrainCircuit,
   Cpu,
   GraduationCap,
   Medal,
   Radar,
-  Sparkles,
 } from "lucide-react";
 import Header from "../components/Landing/Header/Header";
 import Footer from "../components/Landing/Footer/Footer";
+import {
+  MaskedHeading,
+  Reveal,
+  ScrollDrawnLine,
+  Stagger,
+  StaggerItem,
+} from "../components/Motion/Motion";
 
 const interests = [
   "Applied computational electromagnetics and wave interaction analysis in complex geometries",
@@ -127,67 +132,71 @@ export default function OurTeachersPage() {
           <div className="relative max-w-[1320px] mx-auto px-4 sm:px-8 py-14 lg:py-20">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 rounded-lg bg-white/90 border border-slate-200 px-4 py-2 text-sm font-semibold text-[#1E3557] hover:bg-white"
+              className="group inline-flex items-center gap-2 rounded-lg bg-white/90 border border-slate-200 px-4 py-2 text-sm font-semibold text-[#1E3557] hover:bg-white transition"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-1" />
               Back to Home
             </Link>
 
             <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
               <div>
-                <p className="inline-flex items-center gap-2 rounded-full border border-[#1E3557]/20 bg-white/75 px-4 py-1 text-sm font-bold text-[#1E3557]">
-                  <Sparkles className="w-4 h-4" />
-                  Featured Teacher Profile
-                </p>
+                <MaskedHeading
+                  text="Dr. Ali Imran Sandhu"
+                  underline="Imran Sandhu"
+                  underlineColor="#1b96d8"
+                  delay={0.15}
+                  className="text-4xl sm:text-6xl leading-[1.08] tracking-[-0.03em] font-bold text-[#0f172a]"
+                />
 
-                <h1 className="mt-5 text-4xl sm:text-6xl leading-tight font-bold text-[#0f172a]">
-                  Dr. Ali Imran Sandhu
-                </h1>
-
-                <p className="mt-4 text-xl font-semibold text-[#1E3557]">
+                <Reveal delay={0.75}>
+                <p className="mt-5 text-xl font-semibold text-[#1E3557]">
                   Assistant Professor FCSE • Senior Member IEEE
                 </p>
 
-                <p className="mt-6 text-lg leading-relaxed text-slate-700">
+                <p className="mt-6 text-lg leading-relaxed text-slate-700 max-w-[62ch]">
                   Dr. Sandhu is a humble, self-motivated, and detail-oriented
                   academic with excellent communication skills and broad
                   cross-cultural training. He combines deep theoretical
                   foundations with practical research experience to mentor
                   students with precision and care.
                 </p>
+                </Reveal>
 
-                <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="rounded-2xl bg-white border border-slate-200 p-4">
-                    <p className="text-xs text-slate-500">Research Experience</p>
-                    <p className="text-2xl font-bold text-[#1E3557]">10+ Years</p>
-                  </div>
-                  <div className="rounded-2xl bg-white border border-slate-200 p-4">
-                    <p className="text-xs text-slate-500">Degrees</p>
-                    <p className="text-2xl font-bold text-[#1E3557]">BS • MS • Ph.D.</p>
-                  </div>
-                  <div className="rounded-2xl bg-white border border-slate-200 p-4">
-                    <p className="text-xs text-slate-500">Current Role</p>
-                    <p className="text-2xl font-bold text-[#1E3557]">Assistant Professor</p>
-                  </div>
-                </div>
+                <Stagger as="dl" className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3" gap={0.08} delay={0.95}>
+                  {[
+                    ["Research Experience", "10+ Years"],
+                    ["Degrees", "BS • MS • Ph.D."],
+                    ["Current Role", "Assistant Professor"],
+                  ].map(([label, value]) => (
+                    <StaggerItem key={label} className="rounded-2xl bg-white/90 border border-slate-200 p-4 shadow-[0_4px_14px_rgba(19,40,72,0.05)]">
+                      <dt className="text-xs font-medium text-slate-500">{label}</dt>
+                      <dd className="mt-1 text-xl font-bold text-[#1E3557]">{value}</dd>
+                    </StaggerItem>
+                  ))}
+                </Stagger>
               </div>
 
               <div className="relative max-w-[560px] mx-auto w-full">
-                <div className="absolute -right-6 -top-6 w-28 h-28 rounded-3xl bg-[#d8eb9a]/70" />
-                <div className="absolute -left-8 top-20 w-16 h-16 rounded-2xl bg-[#f3c3c3]/85" />
+                <Reveal variant="pop" delay={0.9} className="absolute -right-6 -top-6">
+                  <div className="w-28 h-28 rounded-3xl bg-[#d8eb9a]/70" />
+                </Reveal>
+                <Reveal variant="pop" delay={1.05} className="absolute -left-8 top-20 z-10">
+                  <div className="w-16 h-16 rounded-2xl bg-[#f3c3c3]/85" />
+                </Reveal>
 
                 <div className="relative rounded-[2rem] p-4 sm:p-6 border border-white/75 bg-white/70 backdrop-blur-sm shadow-[0_30px_70px_rgba(16,41,74,0.18)]">
-                  <div className="relative h-[520px] rounded-[1.5rem] overflow-hidden">
+                  <Reveal variant="maskUp" duration={1.3} delay={0.2} className="relative h-[520px] rounded-[1.5rem] overflow-hidden">
                     <Image
                       src="/assets/certificate/ali-imran.jpg"
                       alt="Dr. Ali Imran Sandhu"
                       fill
+                      sizes="(max-width: 1024px) 90vw, 520px"
                       className="object-cover"
                       priority
                     />
-                  </div>
+                  </Reveal>
 
-                  <div className="absolute left-8 right-8 -bottom-6 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-2xl">
+                  <Reveal delay={0.9} className="absolute left-8 right-8 -bottom-6 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-2xl">
                     <p className="text-2xl font-bold text-slate-900">Dr. Ali Imran Sandhu</p>
                     <p className="text-sm font-semibold text-slate-600">
                       Numerical Electromagnetics • Scientific ML • Wave Imaging
@@ -197,7 +206,7 @@ export default function OurTeachersPage() {
                       <Image src="/assets/Logos/chalmerslogo.png" alt="Chalmers" width={80} height={24} className="h-5 w-auto" />
                       <Image src="/assets/Logos/cuilogo.png" alt="COMSATS" width={75} height={24} className="h-5 w-auto" />
                     </div>
-                  </div>
+                  </Reveal>
                 </div>
               </div>
             </div>
@@ -205,31 +214,31 @@ export default function OurTeachersPage() {
         </section>
 
         <section className="max-w-[1320px] mx-auto px-4 sm:px-8 py-16">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Stagger className="grid grid-cols-1 lg:grid-cols-3 gap-6" gap={0.1}>
             {pillars.map((pillar) => {
               const Icon = pillar.icon;
               return (
-                <article
+                <StaggerItem
+                  as="article"
                   key={pillar.title}
-                  className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-xl transition"
+                  className="group rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_4px_14px_rgba(19,40,72,0.04)] transition-shadow duration-300 hover:shadow-[0_20px_44px_rgba(19,40,72,0.12)]"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-[#e6f0fb] text-[#1E3557] flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-xl bg-[#e6f0fb] text-[#1E3557] flex items-center justify-center transition duration-300 ease-out group-hover:bg-[#1E3557] group-hover:text-white group-hover:-rotate-6">
                     <Icon className="w-6 h-6" />
                   </div>
                   <h2 className="mt-4 text-xl font-bold text-[#0f172a]">{pillar.title}</h2>
                   <p className="mt-3 text-slate-600 leading-relaxed">{pillar.body}</p>
-                </article>
+                </StaggerItem>
               );
             })}
-          </div>
+          </Stagger>
         </section>
 
         <section className="bg-white border-y border-slate-200">
           <div className="max-w-[1320px] mx-auto px-4 sm:px-8 py-16">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-              <div>
-                <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">Biography and Qualifications</h2>
-                <div className="w-16 h-1 mt-4 rounded-full bg-[#1E3557]" />
+              <Reveal>
+                <h2 className="text-3xl sm:text-4xl font-bold tracking-[-0.02em] text-slate-900">Biography and Qualifications</h2>
 
                 <p className="mt-6 text-slate-700 leading-relaxed text-lg">
                   Ali Imran Sandhu (Senior Member, IEEE) received the B.S.
@@ -251,127 +260,123 @@ export default function OurTeachersPage() {
                   Engineering, GIK Institute Pakistan.
                 </p>
 
-                <div className="mt-8 grid grid-cols-2 gap-4">
-                  <div className="relative rounded-2xl overflow-hidden h-40">
-                    <Image src="/assets/certificate/ali-imran.jpg" alt="Dr. Ali Imran portrait" fill className="object-cover" />
-                  </div>
-                  <div className="relative rounded-2xl overflow-hidden h-40">
-                    <Image src="/assets/certificate/blocks.jpg" alt="Decorative texture" fill className="object-cover" />
-                  </div>
-                </div>
-              </div>
+              </Reveal>
 
-              <div>
+              <div className="rounded-3xl bg-[#f3f8fd] border border-slate-200 p-6 sm:p-8 self-start">
                 <h2 className="text-2xl font-bold text-slate-900">Research Interests</h2>
-                <ul className="mt-5 space-y-3">
+                <Stagger as="ul" className="mt-5 space-y-3.5" gap={0.07}>
                   {interests.map((interest) => (
-                    <li key={interest} className="flex items-start gap-3 text-slate-700">
-                      <BookOpen className="w-5 h-5 mt-0.5 text-[#1E3557]" />
+                    <StaggerItem as="li" key={interest} className="flex items-start gap-3 text-slate-700">
+                      <BookOpen className="w-5 h-5 mt-0.5 shrink-0 text-[#1b96d8]" />
                       <span>{interest}</span>
-                    </li>
+                    </StaggerItem>
                   ))}
-                </ul>
+                </Stagger>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="max-w-[1320px] mx-auto px-4 sm:px-8 py-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">Academic and Career Timeline</h2>
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-5">
-            {timeline.map((item) => (
-              <article
-                key={`${item.years}-${item.title}`}
-                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
-                    <Image src={item.logo} alt={item.title} width={48} height={48} className="w-full h-full object-cover" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-[#1E3557]">{item.years}</p>
-                    <h3 className="text-lg font-bold text-slate-900">{item.title}</h3>
+        <section className="max-w-[1000px] mx-auto px-4 sm:px-8 py-16 lg:py-20">
+          <MaskedHeading
+            as="h2"
+            trigger="view"
+            text="Academic and Career Timeline"
+            className="text-3xl sm:text-4xl font-bold tracking-[-0.02em] text-slate-900"
+          />
+          <ScrollDrawnLine className="mt-10" lineClassName="left-[23px]" color="#1E3557">
+            <ol className="space-y-6">
+              {timeline.map((item) => (
+                <li key={`${item.years}-${item.title}`} className="relative pl-16">
+                  <Reveal variant="pop" className="absolute left-0 top-3">
+                    <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-4 border-[#f8fbff] bg-white shadow-[0_6px_18px_rgba(19,40,72,0.18)]">
+                      <Image src={item.logo} alt="" width={40} height={40} className="h-full w-full object-cover" />
+                    </span>
+                  </Reveal>
+                  <Reveal delay={0.08} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_4px_14px_rgba(19,40,72,0.05)]">
+                    <p className="text-sm font-bold tabular-nums text-[#1b96d8]">{item.years}</p>
+                    <h3 className="mt-0.5 text-lg font-bold text-slate-900">{item.title}</h3>
                     <p className="text-sm text-slate-600 mt-1">{item.place}</p>
                     <p className="text-slate-700 mt-3">{item.detail}</p>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                  </Reveal>
+                </li>
+              ))}
+            </ol>
+          </ScrollDrawnLine>
         </section>
 
         <section className="bg-[#ebf4fd] border-y border-slate-200">
           <div className="max-w-[1320px] mx-auto px-4 sm:px-8 py-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">Recognition and Distinction</h2>
+            <MaskedHeading
+              as="h2"
+              trigger="view"
+              text="Recognition and Distinction"
+              className="text-3xl sm:text-4xl font-bold tracking-[-0.02em] text-slate-900"
+            />
 
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Stagger as="ul" className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4" gap={0.07}>
               {achievements.map((achievement) => (
-                <div
+                <StaggerItem
+                  as="li"
                   key={achievement}
-                  className="rounded-2xl bg-white border border-slate-200 p-4 flex items-start gap-3"
+                  className="rounded-2xl bg-white border border-slate-200 p-4 flex items-start gap-3 shadow-[0_4px_14px_rgba(19,40,72,0.04)]"
                 >
-                  <Medal className="w-5 h-5 mt-0.5 text-[#1E3557]" />
+                  <Medal className="w-5 h-5 mt-0.5 shrink-0 text-[#c08a1e]" />
                   <p className="text-slate-700">{achievement}</p>
-                </div>
+                </StaggerItem>
               ))}
-            </div>
-
-            <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="relative rounded-2xl overflow-hidden h-44">
-                <Image src="/assets/certificate/blue-lines.jpg" alt="Blue abstract background" fill className="object-cover" />
-              </div>
-              <div className="relative rounded-2xl overflow-hidden h-44">
-                <Image src="/assets/certificate/ali-imran.jpg" alt="Ali Imran profile" fill className="object-cover" />
-              </div>
-              <div className="relative rounded-2xl overflow-hidden h-44">
-                <Image src="/assets/certificate/17973903.jpg" alt="Research background texture" fill className="object-cover" />
-              </div>
-            </div>
+            </Stagger>
           </div>
         </section>
 
         <section className="max-w-[1320px] mx-auto px-4 sm:px-8 py-16">
-          <div className="rounded-3xl bg-gradient-to-r from-[#102645] via-[#1E3557] to-[#355f8c] p-8 sm:p-12 text-white relative overflow-hidden">
+          <Reveal variant="window" duration={1.1} className="rounded-3xl bg-gradient-to-r from-[#102645] via-[#1E3557] to-[#355f8c] p-8 sm:p-12 text-white relative overflow-hidden">
             <Image
               src="/assets/certificate/lines.jpg"
-              alt="Decorative line art"
+              alt=""
               fill
+              sizes="1320px"
               className="object-cover opacity-20"
             />
 
             <div className="relative z-10">
-              <p className="inline-flex items-center gap-2 rounded-full border border-white/35 px-4 py-1 text-sm font-semibold">
-                <Award className="w-4 h-4" />
-                Mentorship and Research Excellence
-              </p>
+              <MaskedHeading
+                as="h2"
+                trigger="view"
+                text="Learning with Dr. Ali Imran means rigorous thinking, modern engineering methods, and globally informed mentorship."
+                underline="rigorous thinking,"
+                className="text-3xl sm:text-5xl font-bold leading-[1.12] tracking-[-0.02em] max-w-[860px]"
+              />
 
-              <h2 className="mt-5 text-3xl sm:text-5xl font-bold max-w-[860px]">
-                Learning with Dr. Ali Imran means rigorous thinking, modern
-                engineering methods, and globally informed mentorship.
-              </h2>
-
+              <Reveal delay={0.4}>
               <p className="mt-5 text-lg text-blue-100 max-w-[780px]">
                 From numerical wave solvers to AI-driven imaging systems, his
                 guidance combines strong fundamentals and frontier-level
                 innovation.
               </p>
+              </Reveal>
 
-              <div className="mt-8 flex flex-wrap gap-3">
-                <span className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold inline-flex items-center gap-2">
+              <Stagger className="mt-8 flex flex-wrap gap-3" gap={0.08} delay={0.6}>
+                <StaggerItem as="span" variant="pop" className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold inline-flex items-center gap-2">
                   <GraduationCap className="w-4 h-4" />
                   Ph.D. KAUST
-                </span>
-                <span className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold inline-flex items-center gap-2">
+                </StaggerItem>
+                <StaggerItem as="span" variant="pop" className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold inline-flex items-center gap-2">
                   <BrainCircuit className="w-4 h-4" />
                   Physics-Informed ML
-                </span>
-                <span className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold inline-flex items-center gap-2">
+                </StaggerItem>
+                <StaggerItem as="span" variant="pop" className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold inline-flex items-center gap-2">
                   <Radar className="w-4 h-4" />
                   Inverse Imaging
-                </span>
-              </div>
+                </StaggerItem>
+                <StaggerItem as="span" variant="pop">
+                  <Link href="/signup" className="rounded-full bg-[#FBF9F6] px-5 py-2 text-sm font-bold text-[#12213b] inline-flex items-center gap-2 transition hover:bg-white">
+                    Learn with Dr. Ali Imran
+                  </Link>
+                </StaggerItem>
+              </Stagger>
             </div>
-          </div>
+          </Reveal>
         </section>
       </main>
 

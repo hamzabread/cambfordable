@@ -2,6 +2,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Cog } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { EASE, MaskedHeading, Reveal, Stagger, StaggerItem } from "../../Motion/Motion";
 
 interface FAQItem {
   id: number;
@@ -67,20 +69,25 @@ export default function FAQSection() {
     >
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[0.95fr_1.25fr] gap-8 lg:gap-12 items-start">
         <div className="pt-3 lg:pt-6">
-          <h2 className="text-5xl sm:text-6xl font-semibold leading-[1.05] text-[#132848]">
-            Got Questions?
-          </h2>
-          <p className="mt-6 max-w-md text-lg leading-relaxed text-slate-700">
-            Find all the answers to common questions here. If you still need
-            extra support, book a free consultation with our team.
-          </p>
+          <MaskedHeading
+            as="h2"
+            trigger="view"
+            text="Got Questions?"
+            className="text-5xl sm:text-6xl font-semibold leading-[1.05] tracking-[-0.03em] text-[#132848]"
+          />
+          <Reveal delay={0.25}>
+            <p className="mt-6 max-w-md text-lg leading-relaxed text-slate-700">
+              Find all the answers to common questions here. If you still need
+              extra support, book a free consultation with our team.
+            </p>
 
-          <Link
-            href="/contact"
-            className="mt-8 inline-flex items-center justify-center rounded-xl bg-black px-8 py-3 text-base font-semibold text-white hover:bg-[#121212] transition"
-          >
-            CONTACT US
-          </Link>
+            <Link
+              href="/contact"
+              className="mt-8 inline-flex items-center justify-center rounded-xl bg-[#1E3557] px-8 py-3 text-base font-semibold text-white hover:bg-[#152a48] transition"
+            >
+              Contact us
+            </Link>
+          </Reveal>
 
           <div className="mt-14 hidden lg:flex items-center gap-3 text-[#5e81b5]">
             <Cog className="h-14 w-14" />
@@ -89,14 +96,15 @@ export default function FAQSection() {
           </div>
         </div>
 
-        <div className="space-y-5">
+        <Stagger className="space-y-5" gap={0.06} amount={0.1}>
           {faqs.map((faq) => (
-            <div
+            <StaggerItem
               key={faq.id}
               className="rounded-2xl border border-[#cfe0f6] bg-[#fdfbf8]/95 shadow-sm overflow-hidden"
             >
               <button
                 onClick={() => toggleExpand(faq.id)}
+                aria-expanded={expandedId === faq.id}
                 className="w-full cursor-pointer px-5 sm:px-6 py-5 flex items-center justify-between gap-4 text-left hover:bg-[#eef4ff] transition-colors"
               >
                 <h3 className="text-xl font-semibold leading-snug text-[#20314f]">
@@ -109,34 +117,29 @@ export default function FAQSection() {
                 />
               </button>
 
-              {expandedId === faq.id && (
-                <div className="px-5 sm:px-6 py-4 border-t border-[#d9e7fa] animate-slideDown bg-[#eef4ff]">
-                  <p className="text-slate-700 leading-relaxed text-base">
-                    {faq.answer}
-                  </p>
-                </div>
-              )}
-            </div>
+              <AnimatePresence initial={false}>
+                {expandedId === faq.id && (
+                  <motion.div
+                    key="answer"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0, transition: { duration: 0.22, ease: EASE } }}
+                    transition={{ duration: 0.38, ease: EASE }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-5 sm:px-6 py-4 border-t border-[#d9e7fa] bg-[#eef4ff]">
+                      <p className="text-slate-700 leading-relaxed text-base">
+                        {faq.answer}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       </div>
 
-      <style jsx>{`
-        @keyframes slideDown {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .animate-slideDown {
-          animation: slideDown 0.3s ease-out;
-        }
-      `}</style>
     </section>
   );
 }

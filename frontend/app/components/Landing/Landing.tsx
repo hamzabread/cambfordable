@@ -12,7 +12,7 @@ import Footer from './Footer/Footer'
 
 const Landing = () => {
   return (
-    <main className="bg-[#FBF9F6] text-slate-900">
+    <main className="overflow-x-clip bg-[#FBF9F6] text-slate-900">
         <Header />
         <Banner />
         <HowItWorks />

@@ -1,11 +1,6 @@
 import React from 'react';
-import { Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react';
-
-interface SocialLink {
-  icon: React.ReactNode;
-  url: string;
-  label: string;
-}
+import Link from 'next/link';
+import { Mail, Phone, MapPin } from 'lucide-react';
 
 interface FooterLink {
   title: string;
@@ -16,31 +11,23 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   const quickLinks: FooterLink[] = [
-    { title: "Home", href: "#" },
-    { title: "Courses", href: "#" },
-    { title: "Learning Tools", href: "#" },
-    { title: "My Credentials", href: "#" },
+    { title: "Home", href: "/" },
+    { title: "Courses", href: "/courses" },
+    { title: "Student portal", href: "/dashboard" },
+    { title: "My results", href: "/results" },
   ];
 
   const courseLinks: FooterLink[] = [
-    { title: "O-Levels Math", href: "#" },
-    { title: "A-Levels Physics", href: "#" },
-    { title: "A-Levels Chemistry", href: "#" },
-    { title: "AI & ML", href: "#" },
+    { title: "O-Levels Math", href: "/signup" },
+    { title: "A-Levels Physics", href: "/signup" },
+    { title: "A-Levels Chemistry", href: "/signup" },
+    { title: "AI & ML", href: "/signup" },
   ];
 
   const policyLinks: FooterLink[] = [
-    { title: "Privacy Policy", href: "#" },
-    { title: "Terms of Service", href: "#" },
-    { title: "Refund Policy", href: "#" },
-    { title: "Contact Us", href: "#" },
-  ];
-
-  const socialLinks: SocialLink[] = [
-    { icon: <Facebook className="w-5 h-5" />, url: "#", label: "Facebook" },
-    { icon: <Twitter className="w-5 h-5" />, url: "#", label: "Twitter" },
-    { icon: <Linkedin className="w-5 h-5" />, url: "#", label: "LinkedIn" },
-    { icon: <Instagram className="w-5 h-5" />, url: "#", label: "Instagram" },
+    { title: "Privacy Policy", href: "/privacy" },
+    { title: "Terms of Service", href: "/terms" },
+    { title: "Contact Us", href: "/contact" },
   ];
 
   return (
@@ -67,8 +54,8 @@ export default function Footer() {
                 </div>
                 <div className="flex items-center gap-3">
                   <Phone className="w-5 h-5 text-blue-400" />
-                  <a href="tel:+1234567890" className="text-gray-300 hover:text-blue-400 transition-colors text-sm">
-                    +1 (234) 567-890
+                  <a href="tel:+923459202628" className="text-gray-300 hover:text-blue-400 transition-colors text-sm">
+                    +92 345 9202628
                   </a>
                 </div>
                 <div className="flex items-center gap-3">
@@ -88,12 +75,12 @@ export default function Footer() {
               <ul className="space-y-3">
                 {quickLinks.map((link) => (
                   <li key={link.title}>
-                    <a
+                    <Link
                       href={link.href}
                       className="text-gray-300 hover:text-emerald-400 transition-colors text-sm font-medium"
                     >
                       {link.title}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -107,12 +94,12 @@ export default function Footer() {
               <ul className="space-y-3">
                 {courseLinks.map((link) => (
                   <li key={link.title}>
-                    <a
+                    <Link
                       href={link.href}
                       className="text-gray-300 hover:text-blue-400 transition-colors text-sm font-medium"
                     >
                       {link.title}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -126,12 +113,12 @@ export default function Footer() {
               <ul className="space-y-3">
                 {policyLinks.map((link) => (
                   <li key={link.title}>
-                    <a
+                    <Link
                       href={link.href}
                       className="text-gray-300 hover:text-green-400 transition-colors text-sm font-medium"
                     >
                       {link.title}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -155,26 +142,12 @@ export default function Footer() {
 
             {/* Center: Quick CTA */}
             <div className="flex gap-4">
-              <button className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 transform hover:translate-y-[-2px] shadow-md hover:shadow-lg text-sm">
+              <Link href="/signup" className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 transform hover:translate-y-[-2px] shadow-md hover:shadow-lg text-sm">
                 Start Learning
-              </button>
-              <button className="border-2 border-gray-400 hover:border-white text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 text-sm">
+              </Link>
+              <Link href="/contact" className="border-2 border-gray-400 hover:border-white text-white font-semibold py-2 px-6 rounded-lg transition-all duration-300 text-sm">
                 Schedule Demo
-              </button>
-            </div>
-
-            {/* Right: Social Links */}
-            <div className="flex gap-4">
-              {socialLinks.map((social) => (
-                <a
-                  key={social.label}
-                  href={social.url}
-                  aria-label={social.label}
-                  className="bg-gray-700 hover:bg-emerald-500 text-white p-3 rounded-full transition-all duration-300 transform hover:translate-y-[-2px]"
-                >
-                  {social.icon}
-                </a>
-              ))}
+              </Link>
             </div>
           </div>
         </div>
