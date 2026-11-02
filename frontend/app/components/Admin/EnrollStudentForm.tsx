@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Circle, AlertCircle } from "lucide-react";
+import { Circle, AlertCircle, UserMinus } from "lucide-react";
+import { getApiError } from "@/lib/portal";
 
 interface User {
   id: number;
   username: string;
-  full_name: string;
+  full_name?: string | null;
   email: string;
   is_admin: boolean;
   payment?: boolean;
@@ -19,15 +20,32 @@ interface Course {
   code: string;
 }
 
-interface StudentWithEnrollment {
-  student: User;
-  isEnrolled: boolean;
+interface CourseEnrollment {
+  user_id: number;
+  paid: boolean;
+  proof_pending?: boolean;
+  paused_at?: string | null;
+  overdue?: boolean;
+  payment_proof_url?: string | null;
+  payment_rejection_reason?: string | null;
+  user: { id: number; username: string; full_name?: string | null; email: string };
+}
+
+function enrollmentStatus(enrollment: CourseEnrollment) {
+  if (enrollment.paid && enrollment.overdue) return { label: "Payment overdue", tone: "bg-red-100 text-red-800" };
+  if (enrollment.paid) return { label: "Enrolled", tone: "bg-green-100 text-green-800" };
+  if (enrollment.paused_at) return { label: "Access paused", tone: "bg-red-100 text-red-800" };
+  if (enrollment.proof_pending) return { label: "Proof pending review", tone: "bg-amber-100 text-amber-800" };
+  if (enrollment.payment_rejection_reason) return { label: "Proof rejected", tone: "bg-red-100 text-red-800" };
+  return { label: "Requested, no proof", tone: "bg-slate-100 text-slate-700" };
 }
 
 const EnrollStudentForm = () => {
   const [students, setStudents] = useState<User[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrollments, setEnrollments] = useState<{ [key: string]: boolean }>({});
+  const [courseEnrollments, setCourseEnrollments] = useState<CourseEnrollment[]>([]);
+  const [confirmingRemoval, setConfirmingRemoval] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,9 +106,10 @@ const EnrollStudentForm = () => {
         }
       );
 
-      const enrolledUserIds = response.data.map((e: any) => e.user_id);
+      setCourseEnrollments(response.data);
+      const enrolledUserIds = response.data.map((e: CourseEnrollment) => e.user_id);
       const enrollmentMap: { [key: string]: boolean } = {};
-      
+
       students.forEach((student) => {
         enrollmentMap[`${selectedCourse}-${student.id}`] = enrolledUserIds.includes(student.id);
       });
@@ -137,21 +156,19 @@ const EnrollStudentForm = () => {
         );
       }
 
-      // Update local state
-      setEnrollments((prev) => ({
-        ...prev,
-        [enrollmentKey]: !isCurrentlyEnrolled,
-      }));
+      setConfirmingRemoval(null);
+      await fetchEnrollments();
 
-      const studentName = students.find(s => s.id === studentId)?.full_name;
+      const enrolledStudent = students.find(s => s.id === studentId);
+      const studentName = enrolledStudent?.full_name || enrolledStudent?.username;
       const courseName = courses.find(c => c.id === selectedCourse)?.name;
       const action = isCurrentlyEnrolled ? "unenrolled from" : "enrolled in";
-      setSuccess(`✅ ${studentName} ${action} ${courseName}`);
+      setSuccess(`${studentName} ${action} ${courseName}`);
 
       setTimeout(() => setSuccess(null), 3000);
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to update enrollment");
+      setError(getApiError(err, "Failed to update enrollment"));
     } finally {
       setEnrolling(null);
     }
@@ -160,7 +177,7 @@ const EnrollStudentForm = () => {
   const filteredStudents = students.filter((s) => {
     // Filter by search term
     const matchesSearch =
-      s.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (s.full_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.email.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -284,7 +301,7 @@ const EnrollStudentForm = () => {
                                 )}
                                 <div className="flex-1">
                                   <div className="font-medium text-slate-900">
-                                    {student.full_name}
+                                    {student.full_name || student.username}
                                   </div>
                                   <div className="text-xs text-slate-500">
                                     {student.username} • {student.email}
@@ -308,6 +325,50 @@ const EnrollStudentForm = () => {
         </div>
       </div>
 
+      {selectedCourse && (
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          <h3 className="text-lg font-bold text-slate-900">
+            Enrolled and pending in {courses.find((c) => c.id === selectedCourse)?.name}
+          </h3>
+          <p className="mt-1 text-sm text-slate-500">
+            Everyone with access or a request for this course. Review payment proofs in the Payments tab.
+          </p>
+          {courseEnrollments.length === 0 ? (
+            <p className="mt-4 text-sm text-slate-500">Nobody has enrolled or requested this course yet.</p>
+          ) : (
+            <ul className="mt-4 divide-y divide-slate-100 rounded-lg border border-slate-200">
+              {courseEnrollments.map((enrollment) => {
+                const status = enrollmentStatus(enrollment);
+                const busy = enrolling === enrollment.user_id;
+                return (
+                  <li key={enrollment.user_id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-slate-900">{enrollment.user.full_name || enrollment.user.username}</p>
+                      <p className="truncate text-xs text-slate-500">{enrollment.user.username} • {enrollment.user.email}</p>
+                    </div>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${status.tone}`}>{status.label}</span>
+                    {confirmingRemoval === enrollment.user_id ? (
+                      <span className="flex items-center gap-2">
+                        <button type="button" disabled={busy} onClick={() => handleToggleEnrollment(enrollment.user_id)} className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-60">
+                          {busy ? "Removing…" : "Confirm removal"}
+                        </button>
+                        <button type="button" onClick={() => setConfirmingRemoval(null)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600">
+                          Keep
+                        </button>
+                      </span>
+                    ) : (
+                      <button type="button" onClick={() => setConfirmingRemoval(enrollment.user_id)} className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-50">
+                        <UserMinus className="h-3.5 w-3.5" /> Unenroll
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+
       {/* Bottom: Guidelines */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
         <h3 className="text-lg font-bold text-slate-900 mb-4">
@@ -328,7 +389,7 @@ const EnrollStudentForm = () => {
               ✅ Click to Enroll Student
             </h4>
             <p>
-              Click on any student to enroll them. Once enrolled, students are removed from the list.
+              Click on any student to enroll them. They then move to the enrolled list below, where you can also unenroll them.
             </p>
           </div>
           <div>
@@ -344,7 +405,7 @@ const EnrollStudentForm = () => {
               💡 Only Available Students Shown
             </h4>
             <p>
-              The list automatically hides already-enrolled students. Only unenrolled students appear here.
+              Students with access or a pending payment proof are listed below the student picker, with their status.
             </p>
           </div>
         </div>

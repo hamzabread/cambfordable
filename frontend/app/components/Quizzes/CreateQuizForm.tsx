@@ -1,9 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import axios from "axios";
+import { getApiError } from "@/lib/portal";
 import { Plus, X, Trash2, ImageIcon } from "lucide-react";
 import QuestionImageUpload from "../QuestionImageUpload";
+import VoiceInput, { appendSpoken } from "../Portal/VoiceInput";
 
 interface Course {
   id: number;
@@ -36,6 +39,7 @@ const CreateQuizForm = () => {
   const [selectedCourse, setSelectedCourse] = useState<number | null>(null);
   const [quizTitle, setQuizTitle] = useState("");
   const [totalMarks, setTotalMarks] = useState(10);
+  const [durationMinutes, setDurationMinutes] = useState(60);
   const [deadline, setDeadline] = useState("");
   const [allowLate, setAllowLate] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([
@@ -50,9 +54,7 @@ const CreateQuizForm = () => {
       temp_id: Math.random().toString(),
     },
   ]);
-  const [uploadingImages, setUploadingImages] = useState<Set<string>>(new Set());
   const [imageFiles, setImageFiles] = useState<{ [key: string]: File }>({});
-  const [createdQuizId, setCreatedQuizId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchCourses();
@@ -98,17 +100,17 @@ const CreateQuizForm = () => {
     setQuestions(questions.filter((_, i) => i !== index));
   };
 
-  const updateQuestion = (
+  const updateQuestion = <K extends keyof Question>(
     index: number,
-    field: keyof Question,
-    value: any
+    field: K,
+    value: Question[K]
   ) => {
     const updated = [...questions];
     updated[index] = { ...updated[index], [field]: value };
     setQuestions(updated);
   };
 
-  const updateOption = (qIdx: number, oIdx: number, field: string, value: any) => {
+  const updateOption = <K extends keyof Option>(qIdx: number, oIdx: number, field: K, value: Option[K]) => {
     const updated = [...questions];
     updated[qIdx].options[oIdx] = {
       ...updated[qIdx].options[oIdx],
@@ -132,10 +134,32 @@ const CreateQuizForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedCourse || !quizTitle || questions.length === 0) {
-      setError("Please fill in all required fields");
+    // The same rules the server applies, checked here so mistakes show at once.
+    const problem = (() => {
+      if (!selectedCourse || !quizTitle.trim()) return "Choose a course and enter a quiz title.";
+      if (questions.length === 0) return "Add at least one question.";
+      for (const [index, question] of questions.entries()) {
+        const label = `Question ${index + 1}`;
+        if (!question.question_text.trim()) return `${label} needs text.`;
+        if (!Number.isInteger(question.marks) || question.marks <= 0) return `${label} needs a mark of at least 1.`;
+        if (question.is_mcq) {
+          const texts = question.options.map((option) => option.option_text.trim());
+          if (texts.length < 2) return `${label} needs at least two options.`;
+          if (texts.some((text) => !text)) return `${label} has a blank option.`;
+          if (new Set(texts.map((text) => text.toLowerCase())).size !== texts.length) return `${label} has two identical options.`;
+          if (question.options.filter((option) => option.is_correct).length !== 1) return `${label} needs exactly one correct option.`;
+        }
+      }
+      const sum = questions.reduce((total, question) => total + question.marks, 0);
+      if (sum !== totalMarks) return `Total marks (${totalMarks}) must equal the sum of the question marks (${sum}).`;
+      if (deadline && new Date(deadline) <= new Date()) return "The deadline must be in the future.";
+      return null;
+    })();
+    if (problem) {
+      setError(problem);
       return;
     }
+    setError(null);
 
     setSubmitting(true);
     try {
@@ -143,15 +167,16 @@ const CreateQuizForm = () => {
 
       const payload = {
         course_id: selectedCourse,
-        title: quizTitle,
+        title: quizTitle.trim(),
         total_marks: totalMarks,
+        duration_minutes: durationMinutes,
         deadline: deadline ? new Date(deadline).toISOString() : null,
         allow_late: allowLate,
         questions: questions.map((q) => ({
-          question_text: q.question_text,
+          question_text: q.question_text.trim(),
           is_mcq: q.is_mcq,
           marks: q.marks,
-          options: q.options,
+          options: q.is_mcq ? q.options.map((option) => ({ ...option, option_text: option.option_text.trim() })) : null,
         })),
       };
 
@@ -187,8 +212,8 @@ const CreateQuizForm = () => {
                 }
               );
               console.log(`✅ Image uploaded successfully:`, imgResponse.data.image_url);
-            } catch (imgErr: any) {
-              console.error(`❌ Failed to upload image for question ${i}:`, imgErr.response?.data || imgErr.message);
+            } catch (imgErr: unknown) {
+              console.error(`Failed to upload image for question ${i}:`, axios.isAxiosError(imgErr) ? imgErr.response?.data || imgErr.message : imgErr);
               // Continue with other uploads even if one fails
             }
           }
@@ -196,12 +221,12 @@ const CreateQuizForm = () => {
       }
 
       setSuccess(`✅ Quiz "${quizTitle}" created successfully!`);
-      setCreatedQuizId(createdQuiz.id);
       
       // Reset form and image storage
       setSelectedCourse(null);
       setQuizTitle("");
       setTotalMarks(10);
+      setDurationMinutes(60);
       setDeadline("");
       setAllowLate(false);
       setImageFiles({});
@@ -218,8 +243,8 @@ const CreateQuizForm = () => {
         },
       ]);
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to create quiz");
+    } catch (err: unknown) {
+      setError(getApiError(err, "Failed to create quiz"));
     } finally {
       setSubmitting(false);
     }
@@ -269,6 +294,7 @@ const CreateQuizForm = () => {
       </div>
 
       {/* Total Marks */}
+      <div className="grid gap-4 sm:grid-cols-2">
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
         <label className="block text-sm font-semibold text-slate-900 mb-3">
           🎯 Total Marks
@@ -280,6 +306,11 @@ const CreateQuizForm = () => {
           min={1}
           className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
+      </div>
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+        <label className="block text-sm font-semibold text-slate-900 mb-3">Duration (minutes)</label>
+        <input type="number" value={durationMinutes} onChange={(event) => setDurationMinutes(Number(event.target.value))} min={1} max={480} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+      </div>
       </div>
 
       {/* Deadline & Late Submission */}
@@ -345,25 +376,46 @@ const CreateQuizForm = () => {
             </div>
 
             {/* Question Text */}
-            <input
-              type="text"
-              value={question.question_text}
-              onChange={(e) =>
-                updateQuestion(qIdx, "question_text", e.target.value)
-              }
-              placeholder="Enter question text"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
+            <div className="space-y-1.5">
+              <div className="flex items-start justify-between gap-3">
+                <label htmlFor={`question-${qIdx}`} className="pt-1.5 text-xs font-semibold text-slate-600">
+                  Question
+                </label>
+                <VoiceInput
+                  label={`question ${qIdx + 1}`}
+                  onText={(text) =>
+                    setQuestions((current) =>
+                      current.map((item, index) =>
+                        index === qIdx ? { ...item, question_text: appendSpoken(item.question_text, text) } : item
+                      )
+                    )
+                  }
+                />
+              </div>
+              <textarea
+                id={`question-${qIdx}`}
+                value={question.question_text}
+                onChange={(e) =>
+                  updateQuestion(qIdx, "question_text", e.target.value)
+                }
+                placeholder="Type the question, or tap Speak and say it"
+                rows={2}
+                className="w-full resize-y px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
 
             {/* Question Image */}
             {question.image_url && (
               <div className="border border-slate-300 rounded-lg overflow-hidden bg-slate-50 p-4">
-                <img
+                <Image
                   src={question.image_url.startsWith('blob:') || question.image_url.startsWith('http') 
                     ? question.image_url 
                     : `${process.env.NEXT_PUBLIC_API_URL}${question.image_url}`}
                   alt="Question"
+                  width={900}
+                  height={500}
+                  unoptimized
                   className="w-full h-auto max-h-48 object-contain"
                 />
                 <button

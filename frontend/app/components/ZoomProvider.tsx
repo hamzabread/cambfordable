@@ -2,8 +2,49 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import zoomSdkPackage from "@zoom/meetingsdk/package.json";
+import { redirectToLogin } from "@/lib/auth";
 
 let zoomGlobalLock = false;
+
+// The bundled SDK imports "react", which the App Router resolves to its own
+// React 19, and the SDK then crashes reading React 18 internals. Instead the
+// page loads Zoom's React 18 and the ES5 SDK build as plain scripts, copied to
+// public/ by scripts/copy-zoom-sdk.mjs.
+const ZOOM_SDK_BASE = `/zoom-sdk/${zoomSdkPackage.version}`;
+let zoomSdkPromise: Promise<any> | null = null;
+
+function loadScript(src: string) {
+  return new Promise<void>((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`);
+    if (existing?.dataset.loaded) return resolve();
+    const script = existing || document.createElement("script");
+    script.src = src;
+    script.async = false;
+    script.addEventListener("load", () => {
+      script.dataset.loaded = "true";
+      resolve();
+    });
+    script.addEventListener("error", () => reject(new Error(`Could not load ${src}`)));
+    if (!existing) document.head.appendChild(script);
+  });
+}
+
+function loadZoomSdk() {
+  zoomSdkPromise ??= (async () => {
+    const zoomWindow = window as any;
+    if (!zoomWindow.ZoomMtgEmbedded) {
+      await loadScript(`${ZOOM_SDK_BASE}/react.min.js`);
+      await loadScript(`${ZOOM_SDK_BASE}/react-dom.min.js`);
+      await loadScript(`${ZOOM_SDK_BASE}/zoom-meeting-embedded-ES5.min.js`);
+    }
+    return zoomWindow.ZoomMtgEmbedded;
+  })().catch((error) => {
+    zoomSdkPromise = null;
+    throw error;
+  });
+  return zoomSdkPromise;
+}
 
 interface ActiveQuestion {
   questionId: number;
@@ -37,6 +78,9 @@ export default function ZoomProvider({
   const [loading, setLoading] = useState(true);
   const [sessionReady, setSessionReady] = useState(false);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const [zoomError, setZoomError] = useState<string | null>(null);
+  const [zoomJoined, setZoomJoined] = useState(false);
+  const [mcqError, setMcqError] = useState<string | null>(null);
   const router = useRouter();
 
   const meetingSDKElement = useRef<HTMLDivElement>(null);
@@ -88,7 +132,7 @@ export default function ZoomProvider({
     const fetchUser = async () => {
       const token = localStorage.getItem("access_token");
       if (!token) {
-        router.push("/login");
+        redirectToLogin();
         return;
       }
 
@@ -101,8 +145,8 @@ export default function ZoomProvider({
         );
         setUser(response.data);
       } catch (err) {
-        localStorage.removeItem("access_token");
-        router.push("/login");
+        if (axios.isAxiosError(err) && err.response?.status === 401) redirectToLogin("expired");
+        else setZoomError("We can't reach the server. Check your connection and try again.");
       } finally {
         setLoading(false);
       }
@@ -140,7 +184,13 @@ export default function ZoomProvider({
         const payload = JSON.parse(event.data);
         const eventType = payload.event_type;
 
+        if (eventType === "error") {
+          setMcqError(payload.detail || "That didn't work. Please try again.");
+          return;
+        }
+
         if (eventType === "question_publish" || eventType === "question_sync") {
+          setMcqError(null);
           setActiveQuestion({
             questionId: payload.question_id,
             question: payload.question,
@@ -395,9 +445,9 @@ export default function ZoomProvider({
     const setupZoom = async () => {
       try {
         zoomGlobalLock = true;
-        const ZoomEmbedMod = await import("@zoom/meetingsdk/embedded");
-        const ZoomMtgEmbedded =
-          ZoomEmbedMod.ZoomMtgEmbedded || ZoomEmbedMod.default || ZoomEmbedMod;
+        setZoomError(null);
+        const ZoomMtgEmbedded = await loadZoomSdk();
+        if (!ZoomMtgEmbedded) throw new Error("The Zoom SDK did not load");
 
         if (!clientRef.current) {
           clientRef.current = ZoomMtgEmbedded.createClient();
@@ -464,22 +514,25 @@ export default function ZoomProvider({
           password: pass,
           userName: user.full_name || user.username,
           userEmail: user.email,
+          // Zoom's participant report returns this, so attendance maps back
+          // to the portal account (backend/crud/zoom_sync.py).
+          customerKey: `u${user.id}`,
         });
-
-        // Speaker view is already set in video config above
-        // No need to call setVideoLayout as it's not a standard API method
+        setZoomJoined(true);
 
         client.on("connection-change", (payload: any) => {
           if (payload.state === "Closed" || payload.state === "Terminated") {
             zoomGlobalLock = false;
-            // Instead of redirecting the current tab, we close it
-            window.close();
-            // Note: window.close() only works if the tab was opened via window.open()
+            router.push("/schedule");
           }
         });
       } catch (error: any) {
         console.error("Zoom Error:", error);
-        if (error.type !== "ALREADY_JOINED") zoomGlobalLock = false;
+        if (error?.type === "ALREADY_JOINED") return;
+        zoomGlobalLock = false;
+        setZoomError(
+          error?.reason || error?.message || "The classroom could not be started.",
+        );
       }
     };
 
@@ -487,7 +540,7 @@ export default function ZoomProvider({
     return () => {
       zoomGlobalLock = false;
     };
-  }, [meetingData, isAdmin, loading, user]);
+  }, [meetingData, isAdmin, loading, user, sessionReady, sessionError]);
 
   const enterFullScreen = () => {
     const elem = document.documentElement;
@@ -500,6 +553,33 @@ export default function ZoomProvider({
         Loading Class...
       </div>
     );
+
+  if (zoomError) {
+    return (
+      <div className="bg-black h-screen w-screen flex items-center justify-center text-white p-6 text-center">
+        <div className="max-w-md">
+          <p className="text-lg font-semibold">The classroom could not start.</p>
+          <p className="mt-2 text-sm text-white/70">{zoomError}</p>
+          <div className="mt-5 flex justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-900"
+            >
+              Try again
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/schedule")}
+              className="rounded-lg border border-white/40 px-4 py-2 text-sm font-semibold"
+            >
+              Back to schedule
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (sessionError) {
     return (
@@ -810,6 +890,10 @@ export default function ZoomProvider({
                 </button>
               </div>
 
+              {mcqError && (
+                <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{mcqError}</p>
+              )}
+
               {activeQuestion && questionStats && (
                 <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 text-sm text-slate-700">
                   <p className="font-semibold text-slate-900 mb-1">Live responses: {questionStats.totalResponses}</p>
@@ -921,7 +1005,12 @@ export default function ZoomProvider({
         )}
       </div>
 
-      <div id="zmmtg-root" ref={meetingSDKElement} className="w-full h-full" />
+      {!zoomJoined && (
+        <div className="absolute inset-0 z-0 flex items-center justify-center text-white">
+          <p>Preparing your classroom…</p>
+        </div>
+      )}
+      <div id="zmmtg-root" ref={meetingSDKElement} className="relative w-full h-full" />
     </div>
   );
 }

@@ -3,14 +3,13 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { BookOpen, AlertCircle, CheckCircle, Loader } from "lucide-react";
+import { getApiError } from "@/lib/portal";
 
-interface CreateCourseFormProps {}
-
-const CreateCourseForm = ({}: CreateCourseFormProps) => {
+const CreateCourseForm = ({ onCreated }: { onCreated?: () => void }) => {
   const [formData, setFormData] = useState({
-    id: "",
     name: "",
     code: "",
+    whatsapp_invite_link: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,14 +28,15 @@ const CreateCourseForm = ({}: CreateCourseFormProps) => {
     setError(null);
     setSuccess(null);
 
-    // Validation
-    if (!formData.id || !formData.name || !formData.code) {
-      setError("All fields are required");
+    const name = formData.name.trim();
+    const code = formData.code.trim();
+    const link = formData.whatsapp_invite_link.trim();
+    if (name.length < 2 || !code) {
+      setError("Enter a course name (at least 2 characters) and a course code.");
       return;
     }
-
-    if (isNaN(Number(formData.id))) {
-      setError("Course ID must be a number");
+    if (link && !link.startsWith("https://")) {
+      setError("The WhatsApp link must start with https://");
       return;
     }
 
@@ -44,40 +44,33 @@ const CreateCourseForm = ({}: CreateCourseFormProps) => {
       setLoading(true);
       const token = localStorage.getItem("access_token");
 
-      const response = await axios.post(
+      await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/courses/`,
         {
-          id: Number(formData.id),
-          name: formData.name,
-          code: formData.code,
+          name,
+          code,
+          whatsapp_invite_link: link || null,
         },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      setSuccess(
-        `Course "${formData.name}" created successfully!`
-      );
+      setSuccess(`Course "${name}" created successfully!`);
+      onCreated?.();
 
       // Reset form
       setFormData({
-        id: "",
         name: "",
         code: "",
+        whatsapp_invite_link: "",
       });
 
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error creating course:", err);
-      if (err.response?.data?.detail) {
-        setError(err.response.data.detail);
-      } else if (err.message === "Network Error") {
-        setError("Network error. Make sure the server is running.");
-      } else {
-        setError("Failed to create course. Please try again.");
-      }
+      setError(getApiError(err, "Failed to create course. Please try again."));
     } finally {
       setLoading(false);
     }
@@ -114,25 +107,6 @@ const CreateCourseForm = ({}: CreateCourseFormProps) => {
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Course ID */}
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Course ID *
-          </label>
-          <input
-            type="number"
-            name="id"
-            value={formData.id}
-            onChange={handleChange}
-            placeholder="e.g., 4"
-            required
-            className="w-full px-4 py-3 border text-black placeholder:text-[#b3b3b3] border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition"
-          />
-          <p className="text-xs text-slate-500 mt-1">
-            Unique numerical identifier for the course
-          </p>
-        </div>
-
         {/* Course Name */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -171,6 +145,26 @@ const CreateCourseForm = ({}: CreateCourseFormProps) => {
           </p>
         </div>
 
+        {/* WhatsApp Group Invite Link */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            WhatsApp Group Link{" "}
+            <span className="text-slate-400 font-normal">(optional)</span>
+          </label>
+          <input
+            type="url"
+            name="whatsapp_invite_link"
+            value={formData.whatsapp_invite_link}
+            onChange={handleChange}
+            placeholder="https://chat.whatsapp.com/..."
+            className="w-full px-4 py-3 border text-black placeholder:text-[#b3b3b3] border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition"
+          />
+          <p className="text-xs text-slate-500 mt-1">
+            Emailed to each student when you approve their enrollment. You can add
+            it later if the group is not ready yet.
+          </p>
+        </div>
+
         {/* Submit Button */}
         <button
           type="submit"
@@ -191,14 +185,6 @@ const CreateCourseForm = ({}: CreateCourseFormProps) => {
         </button>
       </form>
 
-      {/* Info Box */}
-      <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-        <p className="text-xs text-slate-600">
-          <span className="font-semibold">Note:</span> Course IDs must be unique.
-          If you try to create a course with an existing ID, it will fail. Use
-          incremental numbers (1, 2, 3, 4, etc.)
-        </p>
-      </div>
     </div>
   );
 };

@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { AlertCircle, CheckCircle, Send, Upload, X, FileText, Shield, Eye, AlertTriangle, Maximize, ImageIcon, Download } from "lucide-react";
+import Link from "next/link";
+import axios from "axios";
+import { AlertCircle, CheckCircle, Clock, Send, Upload, X, FileText, Shield, Eye, AlertTriangle, Maximize, ImageIcon, Download } from "lucide-react";
+import { ProtectedFileLink, ProtectedImage } from "../Portal/ProtectedFile";
+import { API_URL, authHeaders, getApiError } from "@/lib/portal";
 
 interface Option {
   id: number;
@@ -25,7 +29,39 @@ interface QuizData {
   deadline: string | null;
   is_published: boolean;
   allow_late: boolean;
+  is_late?: boolean;
+  duration_minutes: number;
+  started_at?: string | null;
+  ends_at?: string | null;
+  server_time?: string;
   questions: Question[];
+}
+
+type BlockedState = { kind: "submitted" | "unavailable"; message: string };
+
+interface SavedProgress {
+  answers: { [key: number]: any };
+  fileNames: { [key: number]: string };
+  tabSwitches: number;
+  fullscreenExits: number;
+}
+
+const progressKey = (quizId: number) => `quiz-progress:${quizId}`;
+
+function readProgress(quizId: number): SavedProgress | null {
+  try {
+    const raw = localStorage.getItem(progressKey(quizId));
+    return raw ? (JSON.parse(raw) as SavedProgress) : null;
+  } catch {
+    return null;
+  }
+}
+
+function formatRemaining(ms: number) {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 interface QuizTakerProps {
@@ -40,7 +76,7 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [uploadingFiles, setUploadingFiles] = useState<{ [key: number]: boolean }>({});
-  
+
   // Anti-cheat states
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [quizStarted, setQuizStarted] = useState(false);
@@ -53,9 +89,23 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
   const [answers, setAnswers] = useState<{ [key: number]: any }>({});
   const [fileNames, setFileNames] = useState<{ [key: number]: string }>({});
   const [viewingImage, setViewingImage] = useState<string | null>(null);
-  
+  const [blocked, setBlocked] = useState<BlockedState | null>(null);
+  const [endsAt, setEndsAt] = useState<number | null>(null);
+  const [remainingMs, setRemainingMs] = useState<number | null>(null);
+  const [starting, setStarting] = useState(false);
+  // Server time minus this device's clock, so a wrong device clock can't
+  // shorten or stretch the countdown.
+  const clockOffsetRef = useRef(0);
+
   const autoSubmitTimerRef = useRef<NodeJS.Timeout | null>(null);
   const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // The monitoring listeners are registered once when the quiz starts, so they
+  // reach current values through refs rather than the render they closed over.
+  const tabSwitchesRef = useRef(0);
+  const fullscreenExitsRef = useRef(0);
+  const finishedRef = useRef(false);
+  const handleSubmitRef = useRef<(forceSubmit?: boolean) => Promise<void>>(async () => {});
 
   // Maximum violations allowed before auto-submit
   const MAX_TAB_SWITCHES = 2;
@@ -63,7 +113,7 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
 
   useEffect(() => {
     fetchQuiz();
-    
+
     // Cleanup on unmount
     return () => {
       if (autoSubmitTimerRef.current) clearInterval(autoSubmitTimerRef.current);
@@ -71,6 +121,36 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
       exitFullscreen();
     };
   }, [quizId]);
+
+  // Keep answers and violation counts through a refresh.
+  useEffect(() => {
+    if (!quizStarted || finishedRef.current) return;
+    try {
+      localStorage.setItem(
+        progressKey(quizId),
+        JSON.stringify({ answers, fileNames, tabSwitches, fullscreenExits } satisfies SavedProgress),
+      );
+    } catch {
+      // Storage full or blocked: the quiz still works, it just can't resume.
+    }
+  }, [answers, fileNames, tabSwitches, fullscreenExits, quizStarted, quizId]);
+
+  // Countdown; submits automatically when time runs out.
+  useEffect(() => {
+    if (!quizStarted || endsAt === null) return;
+    const tick = () => {
+      const left = endsAt - (Date.now() + clockOffsetRef.current);
+      setRemainingMs(left);
+      if (left <= 0 && !finishedRef.current) {
+        clearInterval(interval);
+        setError("Time is up. Your answers are being submitted.");
+        handleSubmitRef.current(true);
+      }
+    };
+    const interval = setInterval(tick, 1000);
+    tick();
+    return () => clearInterval(interval);
+  }, [quizStarted, endsAt]);
 
   // Set up anti-cheat monitoring when quiz starts
   useEffect(() => {
@@ -84,9 +164,9 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
         (document as any).mozFullScreenElement ||
         (document as any).msFullscreenElement
       );
-      
+
       setIsFullscreen(isCurrentlyFullscreen);
-      
+
       if (!isCurrentlyFullscreen && quizStarted) {
         handleFullscreenExit();
       }
@@ -110,6 +190,11 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
       showTemporaryWarning("Pasting is disabled during the quiz");
     };
 
+    const handleCut = (e: ClipboardEvent) => {
+      e.preventDefault();
+      showTemporaryWarning("Cutting text is disabled during the quiz");
+    };
+
     // Prevent right-click
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
@@ -124,6 +209,7 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
     document.addEventListener("visibilitychange", handleVisibilityChange);
     document.addEventListener("copy", handleCopy);
     document.addEventListener("paste", handlePaste);
+    document.addEventListener("cut", handleCut);
     document.addEventListener("contextmenu", handleContextMenu);
 
     return () => {
@@ -134,6 +220,7 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       document.removeEventListener("copy", handleCopy);
       document.removeEventListener("paste", handlePaste);
+      document.removeEventListener("cut", handleCut);
       document.removeEventListener("contextmenu", handleContextMenu);
     };
   }, [quizStarted]);
@@ -141,7 +228,7 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
   const showTemporaryWarning = (message: string) => {
     setWarningMessage(message);
     setShowWarning(true);
-    
+
     if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
     warningTimeoutRef.current = setTimeout(() => {
       setShowWarning(false);
@@ -149,56 +236,56 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
   };
 
   const handleTabSwitch = () => {
-    setTabSwitches(prev => {
-      const newCount = prev + 1;
-      
-      if (newCount >= MAX_TAB_SWITCHES) {
-        triggerAutoSubmit("Maximum tab switches exceeded. Quiz is being auto-submitted.");
-      } else {
-        showTemporaryWarning(
-          `Warning: Tab switching detected (${newCount}/${MAX_TAB_SWITCHES}). ${MAX_TAB_SWITCHES - newCount} warnings remaining.`
-        );
-      }
-      
-      return newCount;
-    });
+    if (finishedRef.current) return;
+    const newCount = tabSwitchesRef.current + 1;
+    tabSwitchesRef.current = newCount;
+    setTabSwitches(newCount);
+
+    if (newCount >= MAX_TAB_SWITCHES) {
+      triggerAutoSubmit("Maximum tab switches exceeded. Quiz is being auto-submitted.");
+    } else {
+      showTemporaryWarning(
+        `Warning: Tab switching detected (${newCount}/${MAX_TAB_SWITCHES}). ${MAX_TAB_SWITCHES - newCount} warnings remaining.`
+      );
+    }
   };
 
   const handleFullscreenExit = () => {
-    setFullscreenExits(prev => {
-      const newCount = prev + 1;
-      
-      if (newCount >= MAX_FULLSCREEN_EXITS) {
-        triggerAutoSubmit("Exited fullscreen too many times. Quiz is being auto-submitted.");
-      } else {
-        showTemporaryWarning(
-          `Warning: You exited fullscreen (${newCount}/${MAX_FULLSCREEN_EXITS}). Please click the button to return to fullscreen. ${MAX_FULLSCREEN_EXITS - newCount} exits remaining before auto-submit.`
-        );
-      }
-      
-      return newCount;
-    });
+    if (finishedRef.current) return;
+    const newCount = fullscreenExitsRef.current + 1;
+    fullscreenExitsRef.current = newCount;
+    setFullscreenExits(newCount);
+
+    if (newCount >= MAX_FULLSCREEN_EXITS) {
+      triggerAutoSubmit("Exited fullscreen too many times. Quiz is being auto-submitted.");
+    } else {
+      showTemporaryWarning(
+        `Warning: You exited fullscreen (${newCount}/${MAX_FULLSCREEN_EXITS}). Please click the button to return to fullscreen. ${MAX_FULLSCREEN_EXITS - newCount} exits remaining before auto-submit.`
+      );
+    }
   };
 
   const triggerAutoSubmit = (reason: string) => {
+    if (autoSubmitTimerRef.current || finishedRef.current) return;
     setError(reason);
     setAutoSubmitCountdown(5);
-    
+
     let countdown = 5;
     autoSubmitTimerRef.current = setInterval(() => {
       countdown--;
       setAutoSubmitCountdown(countdown);
-      
+
       if (countdown <= 0) {
         if (autoSubmitTimerRef.current) clearInterval(autoSubmitTimerRef.current);
-        handleSubmit(true); // Force submit
+        autoSubmitTimerRef.current = null;
+        handleSubmitRef.current(true); // Force submit
       }
     }, 1000);
   };
 
   const enterFullscreen = () => {
     const elem = document.documentElement;
-    
+
     if (elem.requestFullscreen) {
       elem.requestFullscreen();
     } else if ((elem as any).webkitRequestFullscreen) {
@@ -222,44 +309,64 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
     }
   };
 
-  const startQuiz = () => {
+  const startQuiz = async () => {
+    // Fullscreen must be requested inside the click, before any await.
     enterFullscreen();
-    setQuizStarted(true);
+    setStarting(true);
+    setError(null);
+    try {
+      const response = await axios.post(`${API_URL}/quizzes/${quizId}/start`, {}, { headers: authHeaders() });
+      clockOffsetRef.current = new Date(response.data.server_time).getTime() - Date.now();
+      setEndsAt(new Date(response.data.ends_at).getTime());
+      const saved = readProgress(quizId);
+      if (saved) {
+        setAnswers(saved.answers || {});
+        setFileNames(saved.fileNames || {});
+        tabSwitchesRef.current = saved.tabSwitches || 0;
+        fullscreenExitsRef.current = saved.fullscreenExits || 0;
+        setTabSwitches(tabSwitchesRef.current);
+        setFullscreenExits(fullscreenExitsRef.current);
+      }
+      setQuizStarted(true);
+    } catch (err) {
+      exitFullscreen();
+      if (axios.isAxiosError(err) && err.response?.status === 409) {
+        setBlocked({ kind: "submitted", message: getApiError(err, "You have already submitted this quiz.") });
+      } else {
+        setError(getApiError(err, "The quiz could not be started. Please try again."));
+      }
+    } finally {
+      setStarting(false);
+    }
   };
 
   const fetchQuiz = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/quizzes/${quizId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      
-      if (!response.ok) throw new Error("Failed to fetch quiz");
-      
-      const data = await response.json();
-      setQuiz(data);
+      const response = await axios.get<QuizData>(`${API_URL}/quizzes/${quizId}`, { headers: authHeaders() });
+      setQuiz(response.data);
+      setBlocked(null);
       setError(null);
     } catch (err) {
-      setError("Failed to load quiz");
-      console.error(err);
+      if (axios.isAxiosError(err) && err.response?.status === 409) {
+        setBlocked({ kind: "submitted", message: getApiError(err, "You have already submitted this quiz.") });
+      } else {
+        setBlocked({ kind: "unavailable", message: getApiError(err, "This quiz could not be loaded.") });
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleAnswerChange = (questionId: number, value: any) => {
-    setAnswers({
-      ...answers,
+    setAnswers((current) => ({
+      ...current,
       [questionId]: value,
-    });
+    }));
   };
 
   const handleFileUpload = async (questionId: number, file: File) => {
-    setUploadingFiles({ ...uploadingFiles, [questionId]: true });
+    setUploadingFiles((current) => ({ ...current, [questionId]: true }));
     setError(null);
 
     try {
@@ -268,7 +375,7 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
       formData.append("file", file);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/uploads/quiz-answer`,
+        `${process.env.NEXT_PUBLIC_API_URL}/uploads/quiz-answer?quiz_id=${quizId}`,
         {
           method: "POST",
           headers: {
@@ -285,18 +392,18 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
 
       const data = await response.json();
       const fileUrl = data.file_url;
-      
+
       if (!fileUrl) {
         throw new Error("No file URL returned from server");
       }
-      
+
       handleAnswerChange(questionId, fileUrl);
-      setFileNames({ ...fileNames, [questionId]: file.name });
+      setFileNames((current) => ({ ...current, [questionId]: file.name }));
     } catch (err: any) {
       setError(err.message || "Failed to upload file");
       console.error(err);
     } finally {
-      setUploadingFiles({ ...uploadingFiles, [questionId]: false });
+      setUploadingFiles((current) => ({ ...current, [questionId]: false }));
     }
   };
 
@@ -311,7 +418,7 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
   };
 
   const handleSubmit = async (forceSubmit: boolean = false) => {
-    if (!quiz) return;
+    if (!quiz || finishedRef.current) return;
 
     // Check if all questions are answered (unless forced auto-submit)
     if (!forceSubmit) {
@@ -322,9 +429,11 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
       }
     }
 
+    // Set before leaving fullscreen below, so that isn't counted as a violation.
+    finishedRef.current = true;
     setSubmitting(true);
     setError(null);
-    
+
     try {
       const token = localStorage.getItem("access_token");
 
@@ -345,8 +454,8 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
 
           return answer;
         }),
-        tab_switches: tabSwitches,
-        fullscreen_exits: fullscreenExits,
+        tab_switches: tabSwitchesRef.current,
+        fullscreen_exits: fullscreenExitsRef.current,
         auto_submitted: forceSubmit,
       };
 
@@ -371,29 +480,37 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
         } catch {
           errorData = { detail: responseText };
         }
-        
-        const errorMsg = errorData.detail 
-          ? (typeof errorData.detail === 'string' 
-              ? errorData.detail 
-              : JSON.stringify(errorData.detail))
-          : "Failed to submit quiz";
-        
+
+        const errorMsg = typeof errorData.detail === "string"
+          ? errorData.detail
+          : Array.isArray(errorData.detail) && errorData.detail[0]?.msg
+            ? String(errorData.detail[0].msg)
+            : "Failed to submit quiz";
+
         throw new Error(errorMsg);
       }
 
-      setSuccess("✅ Quiz submitted successfully!");
+      setSuccess("Quiz submitted successfully.");
+      try {
+        localStorage.removeItem(progressKey(quizId));
+      } catch {
+        // Nothing to clean up.
+      }
       exitFullscreen();
-      
+
       setTimeout(() => {
         if (onSubmit) onSubmit();
       }, 2000);
     } catch (err: any) {
       console.error("Submit error:", err);
+      finishedRef.current = false;
       setError(err.message || "Failed to submit quiz");
     } finally {
       setSubmitting(false);
+      setAutoSubmitCountdown(null);
     }
   };
+  handleSubmitRef.current = handleSubmit;
 
   if (loading) {
     return (
@@ -406,13 +523,33 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
     );
   }
 
-  if (!quiz) {
+  if (blocked || !quiz) {
+    const submitted = blocked?.kind === "submitted";
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
-        Failed to load quiz
+      <div className="max-w-2xl mx-auto rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm" role={submitted ? "status" : "alert"}>
+        {submitted ? <CheckCircle className="mx-auto h-10 w-10 text-green-600" /> : <AlertCircle className="mx-auto h-10 w-10 text-amber-600" />}
+        <h1 className="mt-4 text-xl font-bold text-slate-900">
+          {submitted ? "You've already submitted this quiz" : "This quiz isn't available"}
+        </h1>
+        <p className="mt-2 text-slate-600">
+          {submitted ? "Each quiz can be taken once. Your result appears once it has been graded." : blocked?.message || "This quiz could not be loaded."}
+        </p>
+        <div className="mt-6 flex justify-center gap-3">
+          {submitted && (
+            <Link href={`/quiz/${quizId}/grades`} className="rounded-lg bg-[#0866ef] px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+              View my result
+            </Link>
+          )}
+          <Link href="/quizzes" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            Back to quizzes
+          </Link>
+        </div>
       </div>
     );
   }
+
+  const resuming = Boolean(quiz.started_at);
+  const timeLow = remainingMs !== null && remainingMs <= 60_000;
 
   // Show start screen before quiz begins
   if (!quizStarted) {
@@ -421,9 +558,26 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
         <div className="bg-white rounded-lg shadow-lg border-2 border-slate-200 p-8">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">{quiz.title}</h1>
           <p className="text-slate-600 mb-6">
-            Total Marks: <span className="font-bold">{quiz.total_marks}</span> | 
-            Questions: <span className="font-bold">{quiz.questions.length}</span>
+            Total marks: <span className="font-bold">{quiz.total_marks}</span> ·
+            Questions: <span className="font-bold">{quiz.questions.length}</span> ·
+            Time limit: <span className="font-bold">{quiz.duration_minutes} minutes</span>
           </p>
+
+          {quiz.is_late && (
+            <p className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+              This quiz is past its deadline. You can still take it, but your submission will be marked late.
+            </p>
+          )}
+
+          {resuming && (
+            <p className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+              You already started this quiz. The timer kept running; continue to pick up where you left off.
+            </p>
+          )}
+
+          {error && (
+            <p role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>
+          )}
 
           <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-6 mb-6">
             <div className="flex items-start gap-3 mb-4">
@@ -438,12 +592,16 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
 
             <ul className="space-y-2 text-sm text-yellow-900">
               <li className="flex items-start gap-2">
+                <Clock className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span><strong>Timed:</strong> You have {quiz.duration_minutes} minutes from when you start. Your answers are submitted automatically when the time runs out.</span>
+              </li>
+              <li className="flex items-start gap-2">
                 <Maximize className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                <span><strong>Fullscreen Required:</strong> You must stay in fullscreen mode. Exiting fullscreen more than {MAX_FULLSCREEN_EXITS} times will auto-submit your quiz.</span>
+                <span><strong>Fullscreen Required:</strong> You must stay in fullscreen mode. Exiting fullscreen {MAX_FULLSCREEN_EXITS} times will auto-submit your quiz.</span>
               </li>
               <li className="flex items-start gap-2">
                 <Eye className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                <span><strong>No Tab Switching:</strong> Switching tabs or windows more than {MAX_TAB_SWITCHES} times will auto-submit your quiz.</span>
+                <span><strong>No Tab Switching:</strong> Switching tabs or windows {MAX_TAB_SWITCHES} times will auto-submit your quiz.</span>
               </li>
               <li className="flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -464,10 +622,11 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
 
           <button
             onClick={startQuiz}
-            className="w-full px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold rounded-lg transition flex items-center justify-center gap-2 text-lg"
+            disabled={starting}
+            className="w-full px-8 py-4 bg-green-700 hover:bg-green-800 disabled:opacity-60 text-white font-bold rounded-lg transition flex items-center justify-center gap-2 text-lg"
           >
             <Shield className="w-5 h-5" />
-            I Understand - Start Quiz
+            {starting ? "Starting…" : resuming ? "Continue quiz" : "I understand, start the quiz"}
           </button>
         </div>
       </div>
@@ -487,6 +646,15 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
             <span className="font-bold">Proctored Quiz Active</span>
           </div>
           <div className="flex flex-wrap items-center gap-4 text-sm">
+            {remainingMs !== null && (
+              <div
+                className={`flex items-center gap-2 rounded-full px-3 py-1 font-bold tabular-nums ${timeLow ? "bg-red-500" : "bg-white/15"}`}
+                aria-live={timeLow ? "assertive" : "off"}
+              >
+                <Clock className="w-4 h-4" />
+                <span>{formatRemaining(remainingMs)} left</span>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <Eye className="w-4 h-4" />
               <span>Tab Switches: {tabSwitches}/{MAX_TAB_SWITCHES}</span>
@@ -515,7 +683,7 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
 
       {/* Warning overlay */}
       {showWarning && (
-        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 animate-pulse">
+        <div role="alert" className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 w-[min(28rem,calc(100vw-2rem))]">
           <div className="bg-red-600 text-white px-6 py-4 rounded-lg shadow-2xl border-2 border-red-400 max-w-md">
             <div className="flex items-center gap-3">
               <AlertTriangle className="w-6 h-6 flex-shrink-0" />
@@ -601,21 +769,21 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
                     <ImageIcon className="w-4 h-4" />
                     Question Visual
                   </div>
-                  <a
-                    href={`${process.env.NEXT_PUBLIC_API_URL}${question.image_url}`}
-                    download
+                  <ProtectedFileLink
+                    fileUrl={question.image_url}
+                    mode="download"
                     className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 text-xs font-medium"
                   >
                     <Download className="w-3 h-3" />
                     Download
-                  </a>
+                  </ProtectedFileLink>
                 </div>
                 <div className="p-4 flex justify-center bg-white min-h-[100px]">
-                  <img
-                    src={`${process.env.NEXT_PUBLIC_API_URL}${question.image_url}`}
+                  <ProtectedImage
+                    fileUrl={question.image_url}
                     alt="Question visual"
                     className="max-w-full h-auto max-h-[500px] object-contain rounded cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => setViewingImage(`${process.env.NEXT_PUBLIC_API_URL}${question.image_url}`)}
+                    onClick={() => setViewingImage(question.image_url ?? null)}
                   />
                 </div>
               </div>
@@ -656,7 +824,7 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
                 <p className="text-sm font-semibold text-slate-600 mb-2">
                   Upload your answer:
                 </p>
-                
+
                 {!answers[question.id] ? (
                   <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition">
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -664,12 +832,12 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
                       <p className="mb-2 text-sm text-slate-600">
                         <span className="font-semibold">Click to upload</span> or drag and drop
                       </p>
-                      <p className="text-xs text-slate-500">PDF, DOC, DOCX, TXT, PNG, JPEG, or other images (MAX. 10MB)</p>
+                      <p className="text-xs text-slate-500">PDF, Word, JPEG, PNG or WebP, up to 10 MB</p>
                     </div>
                     <input
                       type="file"
                       className="hidden"
-                      accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.bmp,.webp,image/*"
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
@@ -692,6 +860,7 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
                     </div>
                     <button
                       onClick={() => handleFileRemove(question.id)}
+                      aria-label="Remove file"
                       className="p-1 hover:bg-green-100 rounded transition"
                     >
                       <X className="w-5 h-5 text-green-700" />
@@ -728,9 +897,9 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
         </div>
         <button
           onClick={() => handleSubmit(false)}
-          disabled={submitting || answeredCount !== totalQuestions}
+          disabled={submitting || !!success || answeredCount !== totalQuestions}
           className={`px-8 py-3 font-bold rounded-lg transition flex items-center gap-2 ${
-            submitting || answeredCount !== totalQuestions
+            submitting || !!success || answeredCount !== totalQuestions
               ? "bg-slate-300 text-slate-500 cursor-not-allowed"
               : "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
           }`}
@@ -772,8 +941,8 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
 
             {/* Image */}
             <div className="flex-1 overflow-auto flex items-center justify-center p-4 bg-slate-50">
-              <img
-                src={viewingImage}
+              <ProtectedImage
+                fileUrl={viewingImage}
                 alt="Question visual"
                 className="max-w-full max-h-full object-contain"
               />
@@ -781,14 +950,14 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
 
             {/* Footer */}
             <div className="p-4 border-t border-slate-200 flex gap-3">
-              <a
-                href={viewingImage}
-                download
+              <ProtectedFileLink
+                fileUrl={viewingImage}
+                mode="download"
                 className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition"
               >
                 <Download className="w-4 h-4" />
                 Download
-              </a>
+              </ProtectedFileLink>
               <button
                 onClick={() => setViewingImage(null)}
                 className="flex-1 px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-900 font-medium rounded-lg transition"

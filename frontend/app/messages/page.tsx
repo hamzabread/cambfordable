@@ -1,133 +1,71 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
-import axios from "axios";
-import { useRouter } from "next/navigation";
-import Sidebar from "../components/Dashboard/Sidebar";
-import Header from "../components/Dashboard/Header";
-import StudentMessages from "../components/Messages/StudentMessages";
-import AdminMessages from "../components/Messages/AdminMessages";
-import { MessageCircle, AlertCircle } from "lucide-react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { MessageCircleQuestion, Video } from "lucide-react";
+import CourseQuestions from "../components/Messages/CourseQuestions";
+import MessagesWorkspace from "../components/Messages/MessagesWorkspace";
+import PortalLayout from "../components/Portal/PortalLayout";
+import PortalLoading from "../components/Portal/PortalLoading";
+import { usePortalUser } from "../components/Portal/usePortalUser";
 
-interface User {
-  username: string;
-  email: string;
-  full_name?: string | null;
-  id: number;
-  is_admin: boolean;
-}
+type Tab = "questions" | "live";
 
-const MessagesPage = () => {
-  const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+const TABS: { id: Tab; label: string; icon: typeof Video }[] = [
+  { id: "questions", label: "Course questions", icon: MessageCircleQuestion },
+  { id: "live", label: "Live class chat", icon: Video },
+];
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        router.push("/login");
-        return;
-      }
+function Messages() {
+  const { user, loading } = usePortalUser();
+  const params = useSearchParams();
+  // Notifications link to /messages?thread=<id>; ?tab=live opens the class chat.
+  const threadId = Number(params.get("thread")) || null;
+  const linkedTab: Tab = params.get("tab") === "live" && !threadId ? "live" : "questions";
+  // A tab picked by hand holds until the URL changes (a notification is opened).
+  const urlKey = params.toString();
+  const [picked, setPicked] = useState<{ url: string; tab: Tab } | null>(null);
+  const tab = picked?.url === urlKey ? picked.tab : linkedTab;
+  const setTab = (next: Tab) => setPicked({ url: urlKey, tab: next });
 
-      try {
-        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser(response.data);
-      } catch (err) {
-        localStorage.removeItem("access_token");
-        router.push("/login");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUser();
-  }, [router]);
-
-  if (loading) {
-    return (
-      <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="lg:hidden h-14"></div>
-          <Header
-            user={user || { username: "", email: "", full_name: null, id: 0, is_admin: false }}
-            onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
-          />
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-slate-600">Loading messages...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
+  if (loading || !user) return <PortalLoading label="Loading messages..." />;
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="lg:hidden h-14"></div>
-        <Header
-          user={user}
-          onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
-        />
-
-        <main className="flex-1 overflow-auto">
-          <div className="p-4 sm:p-6 lg:p-8 space-y-8">
-            {/* Header Section */}
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <MessageCircle className="w-8 h-8 text-slate-900" />
-                <h1 className="text-3xl sm:text-4xl font-bold text-slate-900">
-                  Messages
-                </h1>
-              </div>
-              <p className="text-slate-600">
-                {user.is_admin
-                  ? "View and manage all student messages"
-                  : "Send messages to instructors"}
-              </p>
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-                <p className="text-red-800">{error}</p>
-              </div>
-            )}
-
-            {/* Admin or Student View */}
-            {user.is_admin ? (
-              <AdminMessages user={user} />
-            ) : (
-              <StudentMessages user={user} />
-            )}
-          </div>
-        </main>
+    <PortalLayout user={user} wide>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <h1 className="text-2xl font-bold tracking-[-0.03em] text-[#12243d]">Messages</h1>
+        <div role="tablist" aria-label="Message type" className="inline-flex self-start rounded-xl border border-[#dfe6f0] bg-white p-1 shadow-sm sm:self-auto">
+          {TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              id={`messages-tab-${id}`}
+              aria-selected={tab === id}
+              aria-controls={`messages-panel-${id}`}
+              onClick={() => setTab(id)}
+              className={`inline-flex h-9 items-center gap-2 rounded-lg px-3.5 text-xs font-bold transition ${tab === id ? "bg-[#0866ef] text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"}`}
+            >
+              <Icon className="h-3.5 w-3.5" /> {label}
+            </button>
+          ))}
+        </div>
       </div>
-
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 lg:hidden z-40"
-          onClick={() => setSidebarOpen(false)}
-        ></div>
-      )}
-    </div>
+      <div role="tabpanel" id={`messages-panel-${tab}`} aria-labelledby={`messages-tab-${tab}`}>
+        {tab === "questions" ? (
+          <CourseQuestions key={threadId ?? "list"} user={user} initialThreadId={threadId} />
+        ) : (
+          <MessagesWorkspace user={user} onAskQuestion={() => setTab("questions")} />
+        )}
+      </div>
+    </PortalLayout>
   );
-};
+}
 
-export default MessagesPage;
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={<PortalLoading label="Loading messages..." />}>
+      <Messages />
+    </Suspense>
+  );
+}

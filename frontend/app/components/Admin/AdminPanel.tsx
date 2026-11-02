@@ -1,209 +1,52 @@
 "use client";
 
-import React, { useState } from "react";
-import { BookOpen, Video, Settings, Users, Shield } from "lucide-react";
-import CreateCourseForm from "../Admin/CreateCourseForm";
-import CreateLiveClassForm from "../Admin/CreateLiveClassForm";
-import EnrollStudentForm from "../Admin/EnrollStudentForm";
-import ManageAdminTA from "../Admin/ManageAdminTA";
-import ManagePayments from "../Admin/ManagePayments";
+import { useState } from "react";
+import { BookOpen, CheckCircle2, CreditCard, Lightbulb, Shield, Users, Video } from "lucide-react";
+import CreateCourseForm from "./CreateCourseForm";
+import CreateLiveClassForm from "./CreateLiveClassForm";
+import EnrollStudentForm from "./EnrollStudentForm";
+import ManageAdminTA from "./ManageAdminTA";
+import ManagePayments from "./ManagePayments";
+import ManageCourses from "./ManageCourses";
 
-interface AdminPanelProps {
-  isAdmin: boolean;
-}
+type Tab = "courses" | "classes" | "enroll" | "roles" | "payments";
 
-const AdminPanel = ({ isAdmin }: AdminPanelProps) => {
-  const [activeTab, setActiveTab] = useState<"courses" | "classes" | "enroll" | "manage-admin-ta" | "payments">("courses");
+const tabs = [
+  { id: "courses" as const, label: "Courses", description: "Create curriculum", icon: BookOpen },
+  { id: "classes" as const, label: "Live Classes", description: "Schedule sessions", icon: Video },
+  { id: "enroll" as const, label: "Enrollments", description: "Manage students", icon: Users },
+  { id: "roles" as const, label: "Access Roles", description: "Admins and TAs", icon: Shield },
+  { id: "payments" as const, label: "Payments", description: "Review approvals", icon: CreditCard },
+];
 
-  if (!isAdmin) {
-    return null;
-  }
+export default function AdminPanel({ isAdmin }: { isAdmin: boolean }) {
+  const [activeTab, setActiveTab] = useState<Tab>("courses");
+  const [coursesVersion, setCoursesVersion] = useState(0);
+  if (!isAdmin) return null;
+
+  const guidance = activeTab === "courses"
+    ? ["Use a unique course code students can recognize.", "Add the WhatsApp invite only when it is ready to share.", "New courses remain available until a student completes enrollment."]
+    : ["Choose the course before scheduling the session.", "Times are stored with timezone information.", "Enrolled students receive a portal notification automatically."];
 
   return (
-    <div className="space-y-8">
-      {/* Admin Header */}
-      <div>
-        <div className="flex items-center gap-3 mb-2">
-          <Settings className="w-8 h-8 text-orange-600" />
-          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">
-            Admin Tools
-          </h2>
-        </div>
-        <p className="text-slate-600">
-          Create and manage courses, live classes, and student enrollments
-        </p>
-      </div>
+    <div>
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#0866ef]">Administration</p><h1 className="mt-1 text-3xl font-bold tracking-[-0.04em] text-[#06182f]">Admin Control Center</h1><p className="mt-1.5 text-sm text-slate-500">Manage teaching operations, access, and enrollment without leaving the portal.</p></div><div className="flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-700"><CheckCircle2 className="h-4 w-4" /> Administrator access active</div></div>
 
-      {/* Tabs */}
-      <div className="flex gap-4 border-b border-slate-200 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab("courses")}
-          className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition whitespace-nowrap ${
-            activeTab === "courses"
-              ? "border-slate-900 text-slate-900"
-              : "border-transparent text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          <BookOpen className="w-5 h-5" />
-          Create Course
-        </button>
-        <button
-          onClick={() => setActiveTab("classes")}
-          className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition whitespace-nowrap ${
-            activeTab === "classes"
-              ? "border-slate-900 text-slate-900"
-              : "border-transparent text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          <Video className="w-5 h-5" />
-          Create Live Class
-        </button>
-        <button
-          onClick={() => setActiveTab("enroll")}
-          className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition whitespace-nowrap ${
-            activeTab === "enroll"
-              ? "border-slate-900 text-slate-900"
-              : "border-transparent text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          <Users className="w-5 h-5" />
-          Enroll Student
-        </button>
-        <button
-          onClick={() => setActiveTab("manage-admin-ta")}
-          className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition whitespace-nowrap ${
-            activeTab === "manage-admin-ta"
-              ? "border-slate-900 text-slate-900"
-              : "border-transparent text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          <Shield className="w-5 h-5" />
-          Manage Admin/TA
-        </button>
-        <button
-          onClick={() => setActiveTab("payments")}
-          className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition whitespace-nowrap ${
-            activeTab === "payments"
-              ? "border-slate-900 text-slate-900"
-              : "border-transparent text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          <Users className="w-5 h-5" />
-          Payments
-        </button>
-      </div>
+      <nav className="mb-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-5" aria-label="Admin tools">
+        {tabs.map((tab) => { const Icon = tab.icon; const active = activeTab === tab.id; return <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${active ? "border-blue-300 bg-[#0866ef] text-white shadow-lg shadow-blue-200/60" : "border-[#e2e8f1] bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50"}`}><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${active ? "bg-white/15" : "bg-blue-50 text-[#0866ef]"}`}><Icon className="h-4 w-4" /></span><span className="min-w-0"><strong className="block truncate text-xs">{tab.label}</strong><small className={`mt-0.5 block truncate text-[9px] ${active ? "text-blue-100" : "text-slate-400"}`}>{tab.description}</small></span></button>; })}
+      </nav>
 
-      {/* Content Grid */}
-      {activeTab === "enroll" || activeTab === "manage-admin-ta" || activeTab === "payments" ? (
-        // Full width layout for enroll and manage-admin-ta (they have guidelines at the bottom)
-        <div>
-          {activeTab === "enroll" && <EnrollStudentForm />}
-          {activeTab === "manage-admin-ta" && <ManageAdminTA />}
-          {activeTab === "payments" && <ManagePayments />}
-        </div>
-      ) : (
-        // Two column layout for courses and classes
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Main Form */}
-          <div>
-            {activeTab === "courses" && <CreateCourseForm />}
-            {activeTab === "classes" && <CreateLiveClassForm />}
+      <section className="rounded-2xl border border-[#e1e7f0] bg-[#f9fbff] p-4 sm:p-6">
+        {activeTab === "enroll" && <EnrollStudentForm />}
+        {activeTab === "roles" && <ManageAdminTA />}
+        {activeTab === "payments" && <ManagePayments />}
+        {(activeTab === "courses" || activeTab === "classes") && (
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="min-w-0">{activeTab === "courses" ? <><CreateCourseForm onCreated={() => setCoursesVersion((v) => v + 1)} /><ManageCourses refreshKey={coursesVersion} /></> : <CreateLiveClassForm />}</div>
+            <aside className="self-start rounded-xl border border-blue-100 bg-white p-5 shadow-sm xl:sticky xl:top-4"><div className="flex items-center gap-2"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-[#0866ef]">{activeTab === "courses" ? <BookOpen className="h-4 w-4" /> : <Video className="h-4 w-4" />}</span><div><h2 className="text-sm font-bold text-[#263850]">{activeTab === "courses" ? "Course checklist" : "Scheduling checklist"}</h2><p className="text-[10px] text-slate-400">Before you save</p></div></div><div className="mt-5 space-y-3">{guidance.map((item) => <p key={item} className="flex gap-2 text-[11px] leading-5 text-slate-600"><CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />{item}</p>)}</div><div className="mt-5 flex gap-2 rounded-lg bg-amber-50 p-3 text-[10px] leading-4 text-amber-800"><Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0" />Changes become visible to affected students immediately.</div></aside>
           </div>
-
-          {/* Info Panel */}
-          <div className="hidden lg:block">
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 sticky top-20">
-              <h3 className="text-lg font-bold text-slate-900 mb-4">
-                {activeTab === "courses"
-                  ? "Course Guidelines"
-                  : "Live Class Guidelines"}
-              </h3>
-
-              {activeTab === "courses" ? (
-                <div className="space-y-4 text-sm text-slate-600">
-                  <div>
-                    <h4 className="font-semibold text-slate-900 mb-1">
-                      📚 Course ID
-                    </h4>
-                    <p>
-                      Unique identifier for the course. Use numbers (e.g., 4, 5,
-                      6).
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-900 mb-1">
-                      📖 Course Name
-                    </h4>
-                    <p>
-                      Full name of the course (e.g., Chemistry, Physics,
-                      Mathematics).
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-900 mb-1">
-                      🔢 Course Code
-                    </h4>
-                    <p>
-                      Standard course code (e.g., 9701 for Chemistry A-Level).
-                    </p>
-                  </div>
-                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-blue-800 text-xs font-medium">
-                      💡 Tip: Course codes should follow the Cambridge
-                      International Education format.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4 text-sm text-slate-600">
-                  <div>
-                    <h4 className="font-semibold text-slate-900 mb-1">
-                      📚 Course Selection
-                    </h4>
-                    <p>
-                      Select an existing course to associate with this live
-                      class.
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-900 mb-1">
-                      🎓 Class Title
-                    </h4>
-                    <p>
-                      Descriptive title for the class session (e.g., "Organic
-                      Chemistry Lecture").
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-900 mb-1">
-                      ⏰ Start & End Times
-                    </h4>
-                    <p>
-                      Set the exact time when the class starts and ends.
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-900 mb-1">
-                      🔗 Meeting URL
-                    </h4>
-                    <p>
-                      Zoom, Google Meet, or any meeting platform URL.
-                    </p>
-                  </div>
-                  <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-green-800 text-xs font-medium">
-                      ✅ Classes are automatically marked as "LIVE" during the
-                      scheduled time.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </section>
     </div>
   );
-};
-
-export default AdminPanel;
+}

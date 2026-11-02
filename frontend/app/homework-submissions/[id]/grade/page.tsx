@@ -1,306 +1,180 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
-import { ArrowLeft, Save, AlertCircle, FileText, Download } from "lucide-react";
-import Sidebar from "../../../components/Dashboard/Sidebar";
-import TASidebar from "../../../components/TA/TASidebar";
-import Header from "../../../components/Dashboard/Header";
+import { AlertCircle, ArrowLeft, Clock, FileText, Save } from "lucide-react";
+import PortalLayout from "../../../components/Portal/PortalLayout";
+import PortalLoading from "../../../components/Portal/PortalLoading";
+import { usePortalUser } from "../../../components/Portal/usePortalUser";
+import { ProtectedFileLink } from "../../../components/Portal/ProtectedFile";
+import { API_URL, authHeaders, getApiError } from "@/lib/portal";
 
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  is_admin: boolean;
-  is_ta: boolean;
-}
-
-interface HomeworkSubmission {
+interface HomeworkSubmissionDetail {
   id: number;
   homework_id: number;
   homework_title: string;
   course_title: string;
-  student_user_id: number;
+  student_name: string;
   student_username: string;
   submitted_at: string;
+  is_late: boolean;
   score: number | null;
-  total_marks: number;
-  remarks: string | null;
-  file_url?: string;
-  file_name?: string;
+  max_score: number;
+  remark: string | null;
+  file_url: string;
 }
 
 export default function GradeHomeworkPage() {
   const router = useRouter();
   const params = useParams();
-  const submissionId = params.id;
-
-  const [user, setUser] = useState<User | null>(null);
-  const [submission, setSubmission] = useState<HomeworkSubmission | null>(null);
+  const submissionId = Number(params.id);
+  const validId = Number.isInteger(submissionId) && submissionId > 0;
+  const { user, loading: userLoading } = usePortalUser();
+  const [submission, setSubmission] = useState<HomeworkSubmissionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [score, setScore] = useState<number | null>(null);
-  const [remarks, setRemarks] = useState<string>("");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [score, setScore] = useState("");
+  const [remark, setRemark] = useState("");
 
   useEffect(() => {
-    const fetchData = async () => {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        router.push("/login");
-        return;
-      }
+    if (!user || (!user.is_admin && !user.is_ta) || !validId) return;
+    axios
+      .get<HomeworkSubmissionDetail>(`${API_URL}/homeworks/submissions/${submissionId}`, { headers: authHeaders() })
+      .then((response) => {
+        setSubmission(response.data);
+        setScore(response.data.score === null ? "" : String(response.data.score));
+        setRemark(response.data.remark || "");
+      })
+      .catch((requestError) => setError(getApiError(requestError, "This submission could not be loaded.")))
+      .finally(() => setLoading(false));
+  }, [submissionId, user, validId]);
 
-      try {
-        // Get current user
-        const userRes = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/auth/me`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setUser(userRes.data);
-
-        // Check if user is admin or TA
-        if (!userRes.data.is_admin && !userRes.data.is_ta) {
-          setError("You do not have permission to grade submissions");
-          return;
-        }
-
-        // Fetch submission details
-        const submissionRes = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/homework-submissions/${submissionId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setSubmission(submissionRes.data);
-        setScore(submissionRes.data.score);
-        setRemarks(submissionRes.data.remarks || "");
-      } catch (err: any) {
-        console.error("Error fetching data:", err);
-        if (err.response?.status === 403) {
-          setError("You do not have permission to grade this submission");
-        } else {
-          setError("Failed to load submission details");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [submissionId, router]);
-
-  const handleSaveGrade = async () => {
-    if (score === null || score === undefined) {
-      setError("Please enter a score");
+  const handleSave = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!submission) return;
+    setSaveError(null);
+    const value = score.trim() === "" ? null : Number(score);
+    if (value !== null && (Number.isNaN(value) || value < 0 || value > submission.max_score)) {
+      setSaveError(`Score must be between 0 and ${submission.max_score}.`);
       return;
     }
-
-    if (score < 0 || score > (submission?.total_marks || 0)) {
-      setError(
-        `Score must be between 0 and ${submission?.total_marks}`
-      );
+    if (value === null && !remark.trim()) {
+      setSaveError("Enter a score, feedback, or both.");
       return;
     }
-
     setSaving(true);
-    const token = localStorage.getItem("access_token");
-
     try {
-      await axios.patch(
-        `${process.env.NEXT_PUBLIC_API_URL}/homework-submissions/${submissionId}/grade`,
-        {
-          score,
-          remarks,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
+      await axios.post(
+        `${API_URL}/homeworks/grade`,
+        { submission_id: submission.id, score: value, remark: remark.trim() || null },
+        { headers: authHeaders() },
       );
-
-      // Redirect back to TA panel
-      router.push("/ta");
-    } catch (err: any) {
-      console.error("Error saving grade:", err);
-      setError(err.response?.data?.detail || "Failed to save grade");
-    } finally {
+      router.push(user?.is_ta && !user.is_admin ? "/ta" : "/homework");
+    } catch (requestError) {
+      setSaveError(getApiError(requestError, "The grade could not be saved."));
       setSaving(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="lg:hidden h-14"></div>
-          <Header
-            user={user || { username: "", email: "", id: 0, is_admin: false, is_ta: false }}
-            onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
-          />
-          <div className="flex-1 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user || !submission) {
-    return null;
-  }
+  if (userLoading || !user) return <PortalLoading label="Loading submission..." />;
+  const isStaff = user.is_admin || user.is_ta;
+  const shownError = !isStaff
+    ? "Only teachers and teaching assistants can grade submissions."
+    : !validId
+      ? "This submission doesn't exist."
+      : error;
+  const stillLoading = isStaff && validId && loading;
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {user.is_ta ? (
-        <TASidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+    <PortalLayout user={user}>
+      <Link
+        href={user.is_ta && !user.is_admin ? "/ta" : "/homework"}
+        className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-[#0866ef] hover:text-blue-800"
+      >
+        <ArrowLeft className="h-4 w-4" /> Back
+      </Link>
+
+      {stillLoading ? (
+        <div className="h-40 animate-pulse rounded-xl bg-white" />
+      ) : shownError || !submission ? (
+        <div role="alert" className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-5 py-6 text-sm text-red-800">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p className="font-semibold">{shownError || "This submission could not be loaded."}</p>
+        </div>
       ) : (
-        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-      )}
-
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="lg:hidden h-14"></div>
-        <Header
-          user={user}
-          onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
-        />
-
-        <main className="flex-1 overflow-auto">
-          <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-            {/* Header with Back Button */}
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => router.back()}
-                className="p-2 hover:bg-slate-200 rounded-lg transition"
-              >
-                <ArrowLeft className="w-5 h-5 text-slate-600" />
-              </button>
-              <div>
-                <h1 className="text-3xl font-bold text-slate-900">
-                  Grade Homework Submission
-                </h1>
-                <p className="text-slate-600 mt-1">
-                  {submission.homework_title} - {submission.course_title}
-                </p>
-              </div>
+        <div className="max-w-2xl rounded-xl border border-[#e4eaf2] bg-white p-6 shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-wider text-[#0866ef]">{submission.course_title}</p>
+          <h1 className="mt-1 text-2xl font-bold text-slate-900">{submission.homework_title}</h1>
+          <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div>
+              <dt className="text-xs font-semibold text-slate-500">Student</dt>
+              <dd className="mt-1 text-sm font-semibold text-slate-800">
+                {submission.student_name} <span className="font-normal text-slate-500">({submission.student_username})</span>
+              </dd>
             </div>
+            <div>
+              <dt className="text-xs font-semibold text-slate-500">Submitted</dt>
+              <dd className="mt-1 flex items-center gap-2 text-sm text-slate-800">
+                <Clock className="h-4 w-4 text-slate-400" />
+                {new Date(submission.submitted_at).toLocaleString()}
+                {submission.is_late && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">Late</span>}
+              </dd>
+            </div>
+          </dl>
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <p className="text-red-800">{error}</p>
-              </div>
+          <ProtectedFileLink
+            fileUrl={submission.file_url}
+            className="mt-5 inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            <FileText className="h-4 w-4" /> Open submitted file
+          </ProtectedFileLink>
+
+          <form onSubmit={handleSave} className="mt-6 space-y-4 border-t border-slate-100 pt-6">
+            <div>
+              <label htmlFor="grade-score" className="block text-sm font-semibold text-slate-700">
+                Score (out of {submission.max_score})
+              </label>
+              <input
+                id="grade-score"
+                type="number"
+                min={0}
+                max={submission.max_score}
+                step="any"
+                value={score}
+                onChange={(event) => setScore(event.target.value)}
+                className="mt-2 h-11 w-40 rounded-lg border border-slate-200 px-3 text-sm text-slate-800 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+            <div>
+              <label htmlFor="grade-remark" className="block text-sm font-semibold text-slate-700">Feedback</label>
+              <textarea
+                id="grade-remark"
+                rows={4}
+                maxLength={2000}
+                value={remark}
+                onChange={(event) => setRemark(event.target.value)}
+                className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+            {saveError && (
+              <p role="alert" className="flex items-center gap-2 text-sm text-red-600">
+                <AlertCircle className="h-4 w-4" /> {saveError}
+              </p>
             )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Main Content */}
-              <div className="lg:col-span-2 space-y-6">
-                {/* Student Info */}
-                <div className="bg-white rounded-lg border border-slate-200 p-6">
-                  <h2 className="text-lg font-semibold text-slate-900 mb-4">
-                    Student Information
-                  </h2>
-                  <div className="space-y-2">
-                    <p className="text-slate-600">
-                      <span className="font-medium">Username:</span>{" "}
-                      {submission.student_username}
-                    </p>
-                    <p className="text-slate-600">
-                      <span className="font-medium">Submitted:</span>{" "}
-                      {new Date(
-                        submission.submitted_at
-                      ).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Submission File */}
-                {submission.file_url && (
-                  <div className="bg-white rounded-lg border border-slate-200 p-6">
-                    <h2 className="text-lg font-semibold text-slate-900 mb-4">
-                      Submitted File
-                    </h2>
-                    <a
-                      href={submission.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg text-blue-600 font-medium transition"
-                    >
-                      <Download className="w-4 h-4" />
-                      {submission.file_name || "Download Submission"}
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              {/* Sidebar - Grading */}
-              <div className="space-y-6">
-                <div className="bg-white rounded-lg border border-slate-200 p-6 sticky top-6">
-                  <h2 className="text-lg font-semibold text-slate-900 mb-4">
-                    Grading
-                  </h2>
-
-                  <div className="space-y-4">
-                    {/* Score Input */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Score
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="0"
-                          max={submission.total_marks}
-                          value={score || ""}
-                          onChange={(e) =>
-                            setScore(
-                              e.target.value ? parseFloat(e.target.value) : null
-                            )
-                          }
-                          className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="0"
-                        />
-                        <span className="text-slate-600 font-medium">
-                          / {submission.total_marks}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Remarks */}
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Remarks (Optional)
-                      </label>
-                      <textarea
-                        value={remarks}
-                        onChange={(e) => setRemarks(e.target.value)}
-                        rows={4}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                        placeholder="Add any feedback for the student..."
-                      />
-                    </div>
-
-                    {/* Save Button */}
-                    <button
-                      onClick={handleSaveGrade}
-                      disabled={saving}
-                      className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white font-medium py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
-                    >
-                      <Save className="w-4 h-4" />
-                      {saving ? "Saving..." : "Save Grade"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </main>
-      </div>
-
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 lg:hidden z-40"
-          onClick={() => setSidebarOpen(false)}
-        ></div>
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#0866ef] px-5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60"
+            >
+              <Save className="h-4 w-4" /> {saving ? "Saving…" : "Save grade"}
+            </button>
+          </form>
+        </div>
       )}
-    </div>
+    </PortalLayout>
   );
 }

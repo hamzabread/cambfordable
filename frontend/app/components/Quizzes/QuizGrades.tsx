@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { CheckCircle, AlertCircle, MessageSquare, Clock, Download } from "lucide-react";
+import { ProtectedFileLink } from "../Portal/ProtectedFile";
 
 interface QuizGrade {
   submitted: boolean;
@@ -172,16 +173,14 @@ const QuizGrades: React.FC<QuizGradesProps> = ({ quizId }) => {
                 Download the official solution for this quiz
               </p>
             </div>
-            <a
-              href={`${process.env.NEXT_PUBLIC_API_URL}${grade.solution_url}`}
-              download
-              target="_blank"
-              rel="noopener noreferrer"
+            <ProtectedFileLink
+              fileUrl={grade.solution_url}
+              mode="download"
               className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition text-sm"
             >
               <Download className="w-4 h-4" />
               Download Solution
-            </a>
+            </ProtectedFileLink>
           </div>
         </div>
       )}

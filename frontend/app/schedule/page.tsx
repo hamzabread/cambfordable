@@ -1,41 +1,34 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import axios from "axios";
-import { useRouter } from "next/navigation";
-import Sidebar from "../components/Dashboard/Sidebar";
-import Header from "../components/Dashboard/Header";
-import ZoomProvider from "../components/ZoomProvider";
-import PastClassAttachment from "../components/Schedule/PastClassAttachment";
 import {
-  Video,
-  Calendar,
-  Clock,
   AlertCircle,
-  Loader,
+  BookOpen,
+  CalendarDays,
   ExternalLink,
-  CheckCircle,
+  FileDown,
+  Link2,
   MessageCircle,
+  Video,
   X,
 } from "lucide-react";
+import PastClassAttachment from "../components/Schedule/PastClassAttachment";
+import ClassRecap, { DeleteClassButton } from "../components/Schedule/ClassRecap";
+import PortalLayout from "../components/Portal/PortalLayout";
+import PortalLoading from "../components/Portal/PortalLoading";
+import { usePortalUser } from "../components/Portal/usePortalUser";
+import {
+  API_URL,
+  authHeaders,
+  CourseCatalogItem,
+  getAccessToken,
+  isUnauthorized,
+  LiveClass,
+} from "@/lib/portal";
 
-interface LiveClass {
-  id: number;
-  course_id: number;
-  title: string;
-  starts_at: string;
-  ends_at: string;
-  meeting_id: string;
-  join_url: string;
-  is_live: boolean;
-  attachment_url?: string | null;
-}
-
-interface EnrolledCourse {
-  id: number;
-  name: string;
-  code: string;
-}
+type ViewMode = "today" | "week" | "month";
 
 interface CreatedLiveClassState {
   id: number;
@@ -45,569 +38,230 @@ interface CreatedLiveClassState {
 
 const CREATED_LIVE_CLASS_KEY = "created_live_class_state";
 
-const LiveClassesPage = () => {
-  const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+function sameDay(left: Date, right: Date) {
+  return left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth() && left.getDate() === right.getDate();
+}
+
+function formatTime(value: string) {
+  return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+}
+
+function CalendarCard() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, index) => index + 1)];
+
+  return (
+    <section className="rounded-xl border border-[#e4eaf2] bg-white p-4 shadow-[0_8px_30px_rgba(15,35,65,0.045)]">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-sm font-bold text-[#263850]">{today.toLocaleDateString([], { month: "long", year: "numeric" })}</h2>
+        <CalendarDays className="h-4 w-4 text-[#4384ee]" />
+      </div>
+      <div className="grid grid-cols-7 gap-y-2 text-center text-[10px]">
+        {['S','M','T','W','T','F','S'].map((day, index) => <span key={`${day}-${index}`} className="font-bold text-slate-400">{day}</span>)}
+        {cells.map((day, index) => (
+          <span key={index} className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full font-semibold ${day === today.getDate() ? "bg-[#0866ef] text-white" : day ? "text-slate-600" : ""}`}>{day}</span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export default function SchedulePage() {
+  const { user, loading: userLoading } = usePortalUser();
+  const [classes, setClasses] = useState<LiveClass[]>([]);
+  const [courses, setCourses] = useState<CourseCatalogItem[]>([]);
+  const [viewMode, setViewMode] = useState<ViewMode>("today");
+  const [courseFilter, setCourseFilter] = useState<number | "all">("all");
   const [loading, setLoading] = useState(true);
-  const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
-  const [enrolledCourses, setEnrolledCourses] = useState<EnrolledCourse[]>([]);
-  const [joiningId, setJoiningId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [filterCourse, setFilterCourse] = useState<number | null>(null);
   const [openAttachmentModal, setOpenAttachmentModal] = useState<number | null>(null);
   const [savedAdminClass, setSavedAdminClass] = useState<CreatedLiveClassState | null>(null);
-  const [siteOrigin, setSiteOrigin] = useState("");
 
   useEffect(() => {
-    const fetchData = async () => {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        router.push("/login");
-        return;
-      }
-
+    if (!user) return;
+    const fetchSchedule = async () => {
+      const token = getAccessToken();
+      if (!token) return;
       try {
-        setLoading(true);
-
-        // Fetch user
-        const userRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser(userRes.data);
-
-        // Fetch enrolled courses
-        const coursesRes = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/courses/me`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        setEnrolledCourses(coursesRes.data);
-
-        // Fetch live classes
-        const classesRes = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/live-classes/me`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        // Filter classes to only show those from enrolled courses
-        const enrolledCourseIds = coursesRes.data.map(
-          (c: EnrolledCourse) => c.id
-        );
-        const filteredClasses = classesRes.data.filter((cls: LiveClass) =>
-          enrolledCourseIds.includes(cls.course_id)
-        );
-
-        setLiveClasses(filteredClasses);
+        const [classesResponse, catalogResponse] = await Promise.all([
+          axios.get<LiveClass[]>(`${API_URL}${user.is_admin ? "/live-classes/" : "/live-classes/me"}`, { headers: authHeaders(token) }),
+          axios.get<CourseCatalogItem[]>(`${API_URL}/courses/catalog`, { headers: authHeaders(token) }),
+        ]);
+        setClasses(classesResponse.data);
+        setCourses(user.is_admin ? catalogResponse.data : catalogResponse.data.filter((course) => course.enrollment_status === "enrolled"));
         setError(null);
-      } catch (err: any) {
-        console.error("Error fetching live classes:", err);
-        if (err.response?.status === 401) {
-          localStorage.removeItem("access_token");
-          router.push("/login");
-        } else {
-          setError("Failed to load live classes. Please try again later.");
-          // Fallback data for demo
-          setLiveClasses([
-            {
-              id: 1,
-              course_id: 1,
-              title: "Chemistry Lecture - Organic Reactions",
-              starts_at: new Date(Date.now() + 3600000).toISOString(),
-              ends_at: new Date(Date.now() + 7200000).toISOString(),
-              meeting_id: "123456789",
-              join_url: "https://zoom.us/j/example1",
-              is_live: true,
-            },
-            {
-              id: 2,
-              course_id: 2,
-              title: "Mathematics - Calculus Session",
-              starts_at: new Date(Date.now() + 7200000).toISOString(),
-              ends_at: new Date(Date.now() + 10800000).toISOString(),
-              meeting_id: "987654321",
-              join_url: "https://zoom.us/j/example2",
-              is_live: false,
-            },
-          ]);
-          setEnrolledCourses([
-            { id: 1, name: "Chemistry", code: "9701" },
-            { id: 2, name: "Mathematics", code: "9709" },
-          ]);
-        }
+      } catch (requestError) {
+        if (!isUnauthorized(requestError)) setError("We could not load your class schedule. Please try again.");
       } finally {
         setLoading(false);
       }
     };
-
-    fetchData();
-  }, [router]);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setSiteOrigin(window.location.origin);
-    }
-  }, []);
+    void fetchSchedule();
+  }, [user]);
 
   useEffect(() => {
-    if (!user?.is_admin) {
-      setSavedAdminClass(null);
-      return;
-    }
-
-    const savedState = localStorage.getItem(CREATED_LIVE_CLASS_KEY);
-    if (!savedState) {
-      setSavedAdminClass(null);
-      return;
-    }
-
+    if (!user?.is_admin) return;
+    const saved = localStorage.getItem(CREATED_LIVE_CLASS_KEY);
+    if (!saved) return;
     try {
-      const parsedState = JSON.parse(savedState) as CreatedLiveClassState;
-      if (parsedState?.id && parsedState?.title && parsedState?.courseName) {
-        setSavedAdminClass(parsedState);
-      }
-    } catch (parseError) {
-      console.error("Error restoring saved admin class:", parseError);
+      setSavedAdminClass(JSON.parse(saved));
+    } catch {
       localStorage.removeItem(CREATED_LIVE_CLASS_KEY);
-      setSavedAdminClass(null);
     }
-  }, [user?.is_admin]);
+  }, [user]);
 
-  const handleJoinClass = async (classId: number) => {
-    window.open(`/meeting/${classId}`, "_blank");
-  };
+  const courseName = (courseId: number) => courses.find((course) => course.id === courseId)?.name || "Course";
+  const courseCode = (courseId: number) => courses.find((course) => course.id === courseId)?.code || "";
 
-  const handleShareSavedClass = () => {
-    if (!savedAdminClass || !siteOrigin) return;
-
-    const meetingLink = `${siteOrigin}/meeting/${savedAdminClass.id}`;
-    const message = `Join my live class: ${savedAdminClass.title}\n${meetingLink}`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-  };
-
-  const handleJoinSavedClass = () => {
-    if (!savedAdminClass) return;
-    window.open(`/meeting/${savedAdminClass.id}`, "_blank", "noopener,noreferrer");
-  };
-
-  const handleClearSavedClass = () => {
-    localStorage.removeItem(CREATED_LIVE_CLASS_KEY);
-    setSavedAdminClass(null);
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
-
-  const getCourseName = (courseId: number) => {
-    return enrolledCourses.find((c) => c.id === courseId)?.name || "Unknown";
-  };
-
-  const isClassLive = (startsAt: string, endsAt: string) => {
+  const filtered = useMemo(() => {
     const now = new Date();
-    const start = new Date(startsAt);
-    const end = new Date(endsAt);
-    return now >= start && now <= end;
-  };
+    const end = new Date(now);
+    if (viewMode === "today") end.setHours(23, 59, 59, 999);
+    if (viewMode === "week") end.setDate(now.getDate() + 7);
+    if (viewMode === "month") {
+      end.setMonth(now.getMonth() + 1, 0);
+      end.setHours(23, 59, 59, 999);
+    }
 
-  const isUpcoming = (startsAt: string) => {
-    return new Date(startsAt) > new Date();
-  };
+    return classes
+      .filter((item) => courseFilter === "all" || item.course_id === courseFilter)
+      .filter((item) => {
+        const start = new Date(item.starts_at);
+        const classEnd = new Date(item.ends_at);
+        if (classEnd >= now && start <= end) return viewMode !== "today" || sameDay(start, now) || start < now;
+        return false;
+      })
+      .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
+  }, [classes, courseFilter, viewMode]);
 
-  const filteredClasses = filterCourse
-    ? liveClasses.filter((cls) => cls.course_id === filterCourse)
-    : liveClasses;
+  const pastClasses = useMemo(() => {
+    const now = new Date();
+    return classes
+      .filter((item) => new Date(item.ends_at) < now)
+      .filter((item) => courseFilter === "all" || item.course_id === courseFilter)
+      .sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime());
+  }, [classes, courseFilter]);
 
-  const liveNowClasses = filteredClasses.filter((cls) =>
-    isClassLive(cls.starts_at, cls.ends_at)
-  );
-  const upcomingClasses = filteredClasses.filter((cls) =>
-    isUpcoming(cls.starts_at)
-  );
-  const pastClasses = filteredClasses.filter(
-    (cls) => !isClassLive(cls.starts_at, cls.ends_at) && !isUpcoming(cls.starts_at)
-  );
+  if (userLoading || !user) return <PortalLoading label="Loading class schedule..." />;
 
-  if (loading) {
-    return (
-      <div className="flex h-screen bg-linear-to-br from-slate-50 to-slate-100">
-        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="lg:hidden h-14"></div>
-          <Header
-            user={user}
-            onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
-          />
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-slate-600">Loading live classes...</p>
-            </div>
+  const updateClass = (id: number, update: Partial<LiveClass>) =>
+    setClasses((current) => current.map((item) => (item.id === id ? { ...item, ...update } : item)));
+  const removeClass = (id: number) => setClasses((current) => current.filter((item) => item.id !== id));
+  const staff = user.is_admin || user.is_ta;
+
+  const now = new Date();
+  const viewTitle = viewMode === "today" ? "Today’s Classes" : viewMode === "week" ? "Next 7 Days" : "This Month";
+
+  return (
+    <PortalLayout user={user}>
+      <div className="mb-7 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-[-0.04em] text-[#06182f]">Class Schedule</h1>
+          <p className="mt-1.5 text-sm text-slate-500">Manage your upcoming lectures and review past class materials.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <select value={courseFilter} onChange={(event) => setCourseFilter(event.target.value === "all" ? "all" : Number(event.target.value))} className="h-9 rounded-lg border border-[#dce4ef] bg-white px-3 text-xs font-semibold text-slate-600 outline-none focus:border-blue-300">
+              <option value="all">All courses</option>
+              {courses.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}
+          </select>
+          <div className="inline-flex rounded-lg border border-[#dce4ef] bg-[#f2f5fa] p-1">
+            {(["today", "week", "month"] as ViewMode[]).map((mode) => (
+              <button key={mode} type="button" onClick={() => setViewMode(mode)} className={`rounded-md px-3.5 py-1.5 text-xs font-bold capitalize transition ${viewMode === mode ? "bg-white text-[#0866ef] shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>{mode}</button>
+            ))}
           </div>
         </div>
       </div>
-    );
-  }
 
-  return (
-    <div className="flex h-screen bg-linear-to-br from-slate-50 to-slate-100">
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      {error && (
+        <div className="mb-5 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"><AlertCircle className="h-4 w-4" />{error}</div>
+      )}
 
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        <div className="lg:hidden h-14"></div>
-        <Header
-          user={user}
-          onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
-        />
+      {savedAdminClass && (
+        <div className="mb-5 flex flex-col gap-4 rounded-xl border border-blue-200 bg-blue-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div><p className="text-[10px] font-bold uppercase tracking-wider text-[#0866ef]">Admin quick access</p><p className="mt-1 text-sm font-bold text-slate-800">{savedAdminClass.title}</p><p className="text-xs text-slate-500">{savedAdminClass.courseName}</p></div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`Join my live class: ${savedAdminClass.title}\n${window.location.origin}/meeting/${savedAdminClass.id}`)}`, "_blank", "noopener,noreferrer")} className="flex h-9 items-center gap-2 rounded-lg border border-blue-200 bg-white px-3 text-xs font-bold text-slate-700"><MessageCircle className="h-4 w-4" /> Share</button>
+            <button type="button" onClick={() => window.open(`/meeting/${savedAdminClass.id}`, "_blank", "noopener,noreferrer")} className="flex h-9 items-center gap-2 rounded-lg bg-[#0866ef] px-3 text-xs font-bold text-white"><ExternalLink className="h-4 w-4" /> Open class</button>
+            <button type="button" aria-label="Clear quick access" onClick={() => { localStorage.removeItem(CREATED_LIVE_CLASS_KEY); setSavedAdminClass(null); }} className="rounded-lg p-2 text-slate-400 hover:bg-white"><X className="h-4 w-4" /></button>
+          </div>
+        </div>
+      )}
 
-        {/* ZOOM OVERLAY - Renders only when activeMeeting exists */}
-        
-
-        <main className="flex-1 overflow-auto">
-          <div className="p-4 sm:p-6 lg:p-8 space-y-8">
-            {/* Header Section */}
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <Video className="w-8 h-8 text-slate-900" />
-                <h1 className="text-3xl sm:text-4xl font-bold text-slate-900">
-                  Live Classes
-                </h1>
-              </div>
-              <p className="text-slate-600">
-                Join online classes for your enrolled courses
-              </p>
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
-                <p className="text-red-800">{error}</p>
-              </div>
-            )}
-
-            {/* Admin Quick Access Card */}
-            {user?.is_admin && savedAdminClass && (
-              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 sm:p-6">
-                <div className="flex items-start justify-between gap-4 flex-col sm:flex-row sm:items-center">
-                  <div>
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold mb-3">
-                      Admin quick access
-                    </div>
-                    <h2 className="text-xl font-bold text-slate-900">
-                      {savedAdminClass.title}
-                    </h2>
-                    <p className="text-sm text-slate-600 mt-1">
-                      {savedAdminClass.courseName}
-                    </p>
-                    {siteOrigin && (
-                      <p className="text-xs text-slate-500 mt-2 break-all">
-                        {siteOrigin}/meeting/{savedAdminClass.id}
-                      </p>
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="min-w-0">
+          <h2 className="mb-4 text-lg font-bold text-[#071a32]">{viewTitle}</h2>
+          {loading ? (
+            <div className="space-y-3">{[0,1,2].map((item) => <div key={item} className="h-24 animate-pulse rounded-xl border border-slate-200 bg-white" />)}</div>
+          ) : filtered.length ? (
+            <div className="space-y-3">
+              {filtered.map((item) => {
+                const start = new Date(item.starts_at);
+                const end = new Date(item.ends_at);
+                const live = start <= now && end >= now;
+                return (
+                  <article key={item.id} className={`rounded-xl border bg-white shadow-[0_8px_30px_rgba(15,35,65,0.045)] ${live ? "border-[#bcd5fb] bg-[#f7fbff] ring-1 ring-[#dbe8fd] p-5" : "border-[#e4eaf2] p-4"}`}>
+                    {live ? (
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e9f4ff] px-2.5 py-1 text-[10px] font-bold text-[#2879df]"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#0866ef]" /> Happening now</span>
+                          <h3 className="mt-3 text-sm font-bold text-[#23354e]">{item.title}</h3>
+                          <p className="mt-1 text-xs font-medium text-slate-500">{courseCode(item.course_id)} · {courseName(item.course_id)}</p>
+                          <button type="button" onClick={() => window.open(`/meeting/${item.id}`, "_blank", "noopener,noreferrer")} className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-[#0866ef] px-4 text-xs font-bold text-white shadow-md shadow-blue-200 hover:bg-[#075bda]"><Video className="h-4 w-4" /> Join live lecture</button>
+                        </div>
+                        <div className="sm:text-right"><p className="text-xl font-bold text-[#1d68d5]">{formatTime(item.starts_at)}</p><p className="mt-1 text-[10px] font-medium text-slate-500">Ends at {formatTime(item.ends_at)}</p></div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-0">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#edf3fc] text-slate-500"><BookOpen className="h-5 w-5" /></span>
+                        <div className="min-w-0 flex-1"><h3 className="truncate text-sm font-bold text-[#263850]">{item.title}</h3><p className="mt-1 truncate text-[10px] font-medium text-slate-500">{courseCode(item.course_id)} · {courseName(item.course_id)}</p></div>
+                        <div className="shrink-0 text-right"><p className="text-sm font-bold text-slate-700">{formatTime(item.starts_at)}</p><p className="text-[10px] text-slate-400">{formatDate(item.starts_at)}</p></div>
+                        {user.is_admin && <DeleteClassButton item={item} onDeleted={removeClass} compact />}
+                      </div>
                     )}
-                  </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-blue-200 bg-white px-6 py-14 text-center"><CalendarDays className="mx-auto h-9 w-9 text-blue-300" /><h3 className="mt-3 text-sm font-bold text-slate-700">No classes in this view</h3><p className="mt-1 text-xs text-slate-500">Try another time range or check back after a class is scheduled.</p></div>
+          )}
 
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      type="button"
-                      onClick={handleShareSavedClass}
-                      className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      Share on WhatsApp
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleJoinSavedClass}
-                      className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white font-semibold hover:bg-slate-800 transition"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      Join Class
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleClearSavedClass}
-                      className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition"
-                    >
-                      <X className="w-4 h-4" />
-                      Clear
-                    </button>
+          <section className="mt-8">
+            <h2 className="mb-4 text-lg font-bold text-[#071a32]">Past Classes</h2>
+            {pastClasses.length ? (
+              <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+                {pastClasses.slice(0, 6).map((item) => (
+                  <div key={item.id} className="rounded-xl border border-[#e4eaf2] bg-white p-4 shadow-[0_8px_30px_rgba(15,35,65,0.045)]">
+                    <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate text-xs font-bold text-slate-700">{item.title}</h3><p className="mt-0.5 text-[10px] text-slate-400">{formatDate(item.starts_at)}, {formatTime(item.starts_at)}</p></div>{item.attachment_url && <span className="rounded bg-emerald-50 px-1.5 py-1 text-[8px] font-bold uppercase text-emerald-600">Material</span>}</div>
+                    <div className="mt-2 flex items-center gap-3 text-[10px] font-bold text-[#397ee8]">
+                      {item.attachment_url ? <span className="flex items-center gap-1"><FileDown className="h-3 w-3" /> Material below</span> : <span className="text-slate-400">No material posted</span>}
+                    </div>
+                    <ClassRecap item={item} staff={staff} onChange={updateClass} />
+                    <PastClassAttachment classId={item.id} className={item.title} isAdmin={user.is_admin} existingAttachmentUrl={item.attachment_url} onModalStateChange={setOpenAttachmentModal} />
+                    {user.is_admin && <div className="mt-2 flex justify-end"><DeleteClassButton item={item} onDeleted={removeClass} /></div>}
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* Filter by Course */}
-            {enrolledCourses.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setFilterCourse(null)}
-                  className={`px-4 py-2 rounded-lg font-medium transition ${
-                    filterCourse === null
-                      ? "bg-slate-900 text-white"
-                      : "bg-white border border-slate-200 text-slate-700 hover:border-slate-300"
-                  }`}
-                >
-                  All Courses
-                </button>
-                {enrolledCourses.map((course) => (
-                  <button
-                    key={course.id}
-                    onClick={() => setFilterCourse(course.id)}
-                    className={`px-4 py-2 rounded-lg font-medium transition ${
-                      filterCourse === course.id
-                        ? "bg-slate-900 text-white"
-                        : "bg-white border border-slate-200 text-slate-700 hover:border-slate-300"
-                    }`}
-                  >
-                    {course.name}
-                  </button>
                 ))}
               </div>
-            )}
+            ) : <p className="rounded-xl border border-dashed border-slate-200 bg-white p-6 text-center text-xs text-slate-500">No past classes yet.</p>}
+            {pastClasses.length > 6 && <Link href={courseFilter === "all" ? "/schedule/past" : `/schedule/past?course=${courseFilter}`} className="mt-4 flex h-10 items-center justify-center rounded-lg border border-blue-200 bg-white text-xs font-bold text-[#0866ef] hover:bg-blue-50">View all past classes ({pastClasses.length})</Link>}
+          </section>
+        </div>
 
-            {/* Live Now Section */}
-            {liveNowClasses.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                  <h2 className="text-2xl font-bold text-slate-900">
-                    Live Now
-                  </h2>
-                  <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold">
-                    {liveNowClasses.length}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {liveNowClasses.map((liveClass) => (
-                    <div
-                      key={liveClass.id}
-                      className="bg-linear-to-br from-red-50 to-orange-50 rounded-lg shadow-md border border-red-200 p-6 hover:shadow-lg transition"
-                    >
-                      {/* Live Badge */}
-                      <div className="flex items-center gap-2 mb-4">
-                        <div className="flex items-center gap-1.5 px-3 py-1 bg-red-100 rounded-full">
-                          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                          <span className="text-xs font-bold text-red-700">
-                            LIVE
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Content */}
-                      <h3 className="text-lg font-bold text-slate-900 mb-2">
-                        {liveClass.title}
-                      </h3>
-                      <p className="text-sm text-slate-600 mb-4">
-                        {getCourseName(liveClass.course_id)}
-                      </p>
-
-                      {/* Time Info */}
-                      <div className="space-y-2 mb-6">
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Calendar className="w-4 h-4" />
-                          <span>{formatDate(liveClass.starts_at)}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Clock className="w-4 h-4" />
-                          <span>
-                            {formatTime(liveClass.starts_at)} -{" "}
-                            {formatTime(liveClass.ends_at)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Join Button */}
-                      <button
-                        onClick={() => handleJoinClass(liveClass.id)}
-                        disabled={joiningId === liveClass.id}
-                        className="w-full px-4 py-3 bg-linear-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 disabled:opacity-70 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
-                      >
-                        {joiningId === liveClass.id ? (
-                          <>
-                            <Loader className="w-4 h-4 animate-spin" />
-                            Joining...
-                          </>
-                        ) : (
-                          <>
-                            <Video className="w-4 h-4" />
-                            Join Now
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Upcoming Classes Section */}
-            {upcomingClasses.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <Clock className="w-6 h-6 text-slate-900" />
-                  <h2 className="text-2xl font-bold text-slate-900">
-                    Upcoming Classes
-                  </h2>
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-                    {upcomingClasses.length}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {upcomingClasses.map((liveClass) => (
-                    <div
-                      key={liveClass.id}
-                      className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 hover:shadow-md transition"
-                    >
-                      {/* Content */}
-                      <h3 className="text-lg font-bold text-slate-900 mb-2">
-                        {liveClass.title}
-                      </h3>
-                      <p className="text-sm text-slate-600 mb-4">
-                        {getCourseName(liveClass.course_id)}
-                      </p>
-
-                      {/* Time Info */}
-                      <div className="space-y-2 mb-6 bg-blue-50 p-3 rounded-lg">
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Calendar className="w-4 h-4" />
-                          <span>{formatDate(liveClass.starts_at)}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Clock className="w-4 h-4" />
-                          <span>
-                            {formatTime(liveClass.starts_at)} -{" "}
-                            {formatTime(liveClass.ends_at)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Join Button */}
-                      <button
-                        onClick={() => handleJoinClass(liveClass.id)}
-                        disabled={joiningId === liveClass.id}
-                        className="w-full px-4 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-70 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
-                      >
-                        {joiningId === liveClass.id ? (
-                          <>
-                            <Loader className="w-4 h-4 animate-spin" />
-                            Preparing...
-                          </>
-                        ) : (
-                          <>
-                            <ExternalLink className="w-4 h-4" />
-                            Ready to Join
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Past Classes Section */}
-            {pastClasses.length > 0 && (
-              <div className={openAttachmentModal !== null ? "opacity-50 pointer-events-none" : ""}>
-                <h2 className="text-2xl font-bold text-slate-900 mb-4">
-                  Past Classes
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {pastClasses.map((liveClass) => (
-                    <div
-                      key={liveClass.id}
-                      className="bg-slate-50 rounded-lg shadow-sm border border-slate-200 p-6 opacity-75"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="text-lg font-bold text-slate-900">
-                          {liveClass.title}
-                        </h3>
-                        <CheckCircle className="w-5 h-5 text-slate-400" />
-                      </div>
-                      <p className="text-sm text-slate-600 mb-4">
-                        {getCourseName(liveClass.course_id)}
-                      </p>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Calendar className="w-4 h-4" />
-                          <span>{formatDate(liveClass.starts_at)}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Clock className="w-4 h-4" />
-                          <span>
-                            {formatTime(liveClass.starts_at)} -{" "}
-                            {formatTime(liveClass.ends_at)}
-                          </span>
-                        </div>
-                      </div>
-
-                      <p className="text-xs text-slate-500 mt-4">
-                        This class has ended
-                      </p>
-
-                      {/* Attachment Component */}
-                      <PastClassAttachment
-                        classId={liveClass.id}
-                        className={liveClass.title}
-                        isAdmin={user?.is_admin || false}
-                        existingAttachmentUrl={liveClass.attachment_url}
-                        onModalStateChange={setOpenAttachmentModal}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Modal Overlay for Active Attachment Upload */}
-            {openAttachmentModal !== null && (
-              <div className="fixed inset-0 bg-black/70 z-9999"></div>
-            )}
-
-            {/* No Classes Message */}
-            {filteredClasses.length === 0 && (
-              <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-12 text-center">
-                <Video className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                <p className="text-slate-600 text-lg font-medium">
-                  No live classes available
-                </p>
-                <p className="text-slate-500 text-sm mt-2">
-                  Check back later for upcoming classes in your enrolled courses
-                </p>
-              </div>
-            )}
-          </div>
-        </main>
+        <aside className="space-y-5">
+          <CalendarCard />
+          <Link href="/contact" className="flex items-center justify-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-bold text-[#397ee8] hover:bg-blue-100"><Link2 className="h-4 w-4" /> Report a schedule issue</Link>
+        </aside>
       </div>
 
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 lg:hidden z-40"
-          onClick={() => setSidebarOpen(false)}
-        ></div>
-      )}
-    </div>
+      {openAttachmentModal !== null && <div className="fixed inset-0 z-[60] bg-black/60" />}
+    </PortalLayout>
   );
-};
-
-export default LiveClassesPage;
+}

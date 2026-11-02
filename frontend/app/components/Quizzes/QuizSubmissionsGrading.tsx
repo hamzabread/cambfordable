@@ -3,6 +3,9 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { CheckCircle, XCircle, Clock, Award, FileText, Eye, X, Download, ExternalLink, AlertTriangle, Upload, Trash2 } from "lucide-react";
+import { API_URL, authHeaders, getApiError } from "@/lib/portal";
+import ConfirmDelete from "../Portal/ConfirmDelete";
+import { ProtectedFileLink } from "../Portal/ProtectedFile";
 
 interface Submission {
   submission_id?: number;
@@ -117,18 +120,6 @@ const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
     } catch {
       return 'downloaded-file';
     }
-  };
-
-  const getFullFileUrl = (fileUrl: string): string => {
-    if (!fileUrl) return "";
-    
-    if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
-      return fileUrl;
-    }
-    
-    const cleanPath = fileUrl.startsWith('/') ? fileUrl.slice(1) : fileUrl;
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-    return `${apiUrl}/${cleanPath}`;
   };
 
   const fetchQuizzes = async () => {
@@ -250,7 +241,7 @@ const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
       setSuccess("Solution uploaded successfully");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to upload solution");
+      setError(getApiError(err, "Failed to upload solution"));
     } finally {
       setUploadingSolution(false);
       e.target.value = "";
@@ -269,7 +260,7 @@ const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
       setSuccess("Solution removed");
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to remove solution");
+      setError(getApiError(err, "Failed to remove solution"));
     }
   };
 
@@ -284,6 +275,11 @@ const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
 
     if (score === undefined || score === null || isNaN(score) || score < 0) {
       setError("Please enter a valid score");
+      return;
+    }
+
+    if (!Number.isInteger(score)) {
+      setError("Quiz scores must be whole numbers");
       return;
     }
 
@@ -320,7 +316,7 @@ const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
       setTimeout(() => fetchSubmissions(), 1000);
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to grade submission");
+      setError(getApiError(err, "Failed to grade submission"));
       console.error("Grading error:", err);
     } finally {
       setGrading(null);
@@ -344,7 +340,7 @@ const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
       const answersData = response.data.answers || [];
       setAnswers(answersData);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to load answers");
+      setError(getApiError(err, "Failed to load answers"));
       console.error("Load answers error:", err);
       setViewingAnswers(null);
     } finally {
@@ -422,10 +418,10 @@ const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
                   </h4>
                   <div className="space-y-3">
                     {course.quizzes.map((quiz) => (
+                      <div key={quiz.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-1 shadow-sm transition hover:border-blue-400">
                       <button
-                        key={quiz.id}
                         onClick={() => handleSelectQuiz(quiz.id)}
-                        className="w-full text-left p-4 rounded-lg border border-slate-200 hover:border-blue-400 hover:bg-blue-50 transition bg-white shadow-sm"
+                        className="min-w-0 flex-1 text-left p-3 rounded-md hover:bg-blue-50 transition"
                       >
                         <div className="flex items-center justify-between">
                           <div>
@@ -443,6 +439,17 @@ const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
                           </div>
                         </div>
                       </button>
+                      {!isTAMode && (
+                        <ConfirmDelete
+                          itemName={quiz.title}
+                          warning="Its questions, every student's answers and grades, and its solution file are removed for good."
+                          onConfirm={async () => {
+                            await axios.delete(`${API_URL}/quizzes/${quiz.id}`, { headers: authHeaders() });
+                            setQuizzes((current) => current.filter((item) => item.id !== quiz.id));
+                          }}
+                        />
+                      )}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -534,15 +541,13 @@ const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
           <div className="flex items-center gap-3">
             {solutionUrl ? (
               <>
-                <a
-                  href={`${process.env.NEXT_PUBLIC_API_URL}${solutionUrl}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <ProtectedFileLink
+                  fileUrl={solutionUrl}
                   className="flex items-center gap-2 px-3 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg transition text-sm font-medium border border-purple-200"
                 >
                   <Download className="w-4 h-4" />
                   View Solution
-                </a>
+                </ProtectedFileLink>
                 <button
                   onClick={handleRemoveSolution}
                   className="flex items-center gap-1 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition text-sm font-medium border border-red-200"
@@ -715,7 +720,7 @@ const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
                         type="number"
                         min={0}
                         max={submission.total_marks || 100}
-                        step="0.5"
+                        step="1"
                         value={scores[submissionId] ?? ""}
                         onChange={(e) =>
                           setScores({
@@ -841,23 +846,23 @@ const QuizSubmissionsGrading: React.FC<QuizSubmissionsGradingProps> = ({
                                 </div>
                               </div>
                               <div className="flex gap-2">
-                                <a
-                                  href={`${getFullFileUrl(studentAnswer)}?mode=view`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                <ProtectedFileLink
+                                  fileUrl={studentAnswer}
+                                  filename={getFilenameFromUrl(studentAnswer, answer.original_filename)}
                                   className="flex items-center gap-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition text-sm font-medium"
                                 >
                                   <ExternalLink className="w-4 h-4" />
                                   View
-                                </a>
-                                <a
-                                  href={getFullFileUrl(studentAnswer)}
-                                  download={getFilenameFromUrl(studentAnswer, answer.original_filename)}
+                                </ProtectedFileLink>
+                                <ProtectedFileLink
+                                  fileUrl={studentAnswer}
+                                  mode="download"
+                                  filename={getFilenameFromUrl(studentAnswer, answer.original_filename)}
                                   className="flex items-center gap-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition text-sm font-medium"
                                 >
                                   <Download className="w-4 h-4" />
                                   Download
-                                </a>
+                                </ProtectedFileLink>
                               </div>
                             </div>
                           </div>

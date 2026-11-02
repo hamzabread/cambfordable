@@ -6,11 +6,11 @@ import {
   BookOpen,
   Plus,
   AlertCircle,
-  CheckCircle,
-  Loader,
   Eye,
 } from "lucide-react";
 import CreateHomeworkForm from "../Admin/CreateHomeworkForm";
+import ConfirmDelete from "../../Portal/ConfirmDelete";
+import { API_URL, authHeaders } from "@/lib/portal";
 import HomeworkSubmissionsModal from "../Admin/HomeworkSubmissionsModal";
 
 interface Homework {
@@ -57,7 +57,7 @@ const AdminHomework = ({ isAdmin, isTAMode = false }: AdminHomeworkProps) => {
           ? `${process.env.NEXT_PUBLIC_API_URL}/courses/me`
           : `${process.env.NEXT_PUBLIC_API_URL}/courses/`;
         
-        const coursesRes = await axios.get(coursesUrl, {
+        const coursesRes = await axios.get<Course[]>(coursesUrl, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCourses(coursesRes.data);
@@ -66,21 +66,21 @@ const AdminHomework = ({ isAdmin, isTAMode = false }: AdminHomeworkProps) => {
         const allHomeworks: Homework[] = [];
         for (const course of coursesRes.data) {
           try {
-            const hwRes = await axios.get(
+            const hwRes = await axios.get<Homework[]>(
               `${process.env.NEXT_PUBLIC_API_URL}/homeworks/course/${course.id}`,
               {
                 headers: { Authorization: `Bearer ${token}` },
               }
             );
             // Add course_name to each homework
-            const homeworksWithCourse = hwRes.data.map((hw: any) => ({
+            const homeworksWithCourse = hwRes.data.map((hw) => ({
               ...hw,
               course_name: course.name,
             }));
             allHomeworks.push(...homeworksWithCourse);
-          } catch (err: any) {
+          } catch (err: unknown) {
             // Skip courses without homeworks
-            if (err.response?.status !== 404) {
+            if (!axios.isAxiosError(err) || err.response?.status !== 404) {
               console.error(`Error fetching homeworks for course ${course.id}:`, err);
             }
           }
@@ -94,29 +94,16 @@ const AdminHomework = ({ isAdmin, isTAMode = false }: AdminHomeworkProps) => {
 
         setHomeworks(sorted);
         setError(null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error fetching homeworks:", err);
-        // Fallback data
-        setCourses([
-          { id: 1, name: "Chemistry", code: "9701" },
-          { id: 2, name: "Mathematics", code: "9709" },
-        ]);
-        setHomeworks([
-          {
-            id: 1,
-            course_id: 1,
-            title: "Organic Chemistry Problem Set",
-            description: "Complete problems 1-15 from Chapter 6",
-            due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-          },
-        ]);
+        setError("Failed to load homework data");
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [isTAMode]);
 
   const getCourseName = (courseId: number) => {
     return courses.find((c) => c.id === courseId)?.name || "Course";
@@ -139,7 +126,7 @@ const AdminHomework = ({ isAdmin, isTAMode = false }: AdminHomeworkProps) => {
   };
 
   const handleCreateSuccess = (newHomework: Homework) => {
-    setHomeworks([newHomework, ...homeworks]);
+    setHomeworks([{ ...newHomework, course_name: getCourseName(newHomework.course_id) }, ...homeworks]);
     setShowForm(false);
     setError(null);
   };
@@ -223,10 +210,10 @@ const AdminHomework = ({ isAdmin, isTAMode = false }: AdminHomeworkProps) => {
                   {course.homeworks.map((homework) => (
                     <div
                       key={homework.id}
-                      className={`bg-white rounded-lg shadow-sm border-l-4 p-6 hover:shadow-md transition ${
+                      className={`bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition ${
                         isOverdue(homework.due_date)
-                          ? "border-l-red-500"
-                          : "border-l-blue-500"
+                          ? "border-red-200"
+                          : "border-slate-200"
                       }`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -251,6 +238,17 @@ const AdminHomework = ({ isAdmin, isTAMode = false }: AdminHomeworkProps) => {
                         </div>
 
                         {/* Right Section - View Button */}
+                        <div className="flex items-center gap-2">
+                        {isAdmin && !isTAMode && (
+                          <ConfirmDelete
+                            itemName={homework.title}
+                            warning="Every student's submission, grade and feedback is removed for good."
+                            onConfirm={async () => {
+                              await axios.delete(`${API_URL}/homeworks/${homework.id}`, { headers: authHeaders() });
+                              setHomeworks((current) => current.filter((item) => item.id !== homework.id));
+                            }}
+                          />
+                        )}
                         <button
                           onClick={() => {
                             setSelectedHomework(homework);
@@ -261,6 +259,7 @@ const AdminHomework = ({ isAdmin, isTAMode = false }: AdminHomeworkProps) => {
                           <Eye className="w-4 h-4" />
                           View Submissions
                         </button>
+                        </div>
                       </div>
                     </div>
                   ))}

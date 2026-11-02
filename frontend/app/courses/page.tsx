@@ -1,433 +1,364 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import axios from "axios";
-import { useRouter } from "next/navigation";
-import Sidebar from "../components/Dashboard/Sidebar";
-import Header from "../components/Dashboard/Header";
 import {
-  BookOpen,
-  Plus,
-  Check,
-  Loader,
   AlertCircle,
-  Search,
+  ArrowRight,
+  Check,
+  Clock3,
+  FileUp,
+  GraduationCap,
+  LoaderCircle,
+  X,
 } from "lucide-react";
+import PortalLayout from "../components/Portal/PortalLayout";
+import PortalLoading from "../components/Portal/PortalLoading";
+import { usePortalUser } from "../components/Portal/usePortalUser";
+import {
+  API_URL,
+  authHeaders,
+  clampProgress,
+  CourseCatalogItem,
+  formatDay,
+  getAccessToken,
+  getApiError,
+  isUnauthorized,
+} from "@/lib/portal";
 
-interface Course {
-  id: number;
-  name: string;
-  code: string;
-  progress: number;
-  completed: number;
-}
+const COURSE_IMAGE = "/assets/kimberly-farmer-lUaaKCUANVI-unsplash.jpg";
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
-interface EnrolledCourse extends Course {
-  enrolled: true;
-}
+// Courses the student has (or had, while paused) access to.
+const mine = (course: CourseCatalogItem) =>
+  course.enrollment_status === "enrolled" || course.enrollment_status === "paused";
 
-interface AvailableCourse extends Course {
-  enrolled: false;
-}
+const isRenewal = (course: CourseCatalogItem) => mine(course);
 
-const CoursesPage = () => {
-  const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
-  const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
-  const [enrollingId, setEnrollingId] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [paymentFile, setPaymentFile] = useState<File | null>(null);
-  const [uploadingPayment, setUploadingPayment] = useState(false);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        router.push("/login");
-        return;
-      }
-
-      try {
-        setLoading(true);
-
-        // Fetch user
-        const userRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser(userRes.data);
-
-        // Fetch enrolled courses
-        const enrolledRes = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/courses/me`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        setEnrolledCourses(enrolledRes.data);
-
-        // Fetch all courses
-        const allCoursesRes = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/courses/`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        // Filter to show only courses not enrolled in
-        const available = allCoursesRes.data.filter(
-          (course: Course) =>
-            !enrolledRes.data.some((ec: Course) => ec.id === course.id)
-        );
-        setAvailableCourses(available);
-        setError(null);
-      } catch (err: any) {
-        console.error("Error fetching courses:", err);
-        if (err.response?.status === 401) {
-          localStorage.removeItem("access_token");
-          router.push("/login");
-        } else {
-          setError("Failed to load courses. Please try again later.");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [router]);
-
-  const handleEnroll = async (courseId: number) => {
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-
-    const courseToEnroll = availableCourses.find((c) => c.id === courseId) || null;
-    setSelectedCourse(courseToEnroll);
-    setPaymentFile(null);
-    setPaymentModalOpen(true);
-  };
-
-  const handlePaymentEnroll = async () => {
-    if (!selectedCourse || !paymentFile) {
-      setError("Please upload the payment proof to continue.");
-      return;
-    }
-
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-
-    try {
-      setUploadingPayment(true);
-      const formData = new FormData();
-      formData.append("file", paymentFile);
-
-      await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/courses/${selectedCourse.id}/enroll-with-proof`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      setEnrolledCourses([...enrolledCourses, selectedCourse]);
-      setAvailableCourses(availableCourses.filter((c) => c.id !== selectedCourse.id));
-      setSuccess(`Successfully enrolled in ${selectedCourse.name}!`);
-      setTimeout(() => setSuccess(null), 3000);
-      setPaymentModalOpen(false);
-    } catch (err: any) {
-      console.error("Error enrolling in course:", err);
-      setError(err.response?.data?.detail || "Failed to enroll in course. Try again.");
-    } finally {
-      setUploadingPayment(false);
-      setEnrollingId(null);
-    }
-  };
-
-  const filteredEnrolled = enrolledCourses.filter((course) =>
-    course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    course.code.toLowerCase().includes(searchTerm.toLowerCase())
+function BillingNote({ course, onUpload }: { course: CourseCatalogItem; onUpload: () => void }) {
+  if (!course.paid_until) return null;
+  const uploadButton = (
+    <button type="button" onClick={onUpload} className="mt-2 flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-[#0866ef] text-xs font-bold text-[#0866ef] hover:bg-blue-50">
+      Upload this month&apos;s payment <FileUp className="h-3.5 w-3.5" />
+    </button>
   );
-
-  const filteredAvailable = availableCourses.filter((course) =>
-    course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    course.code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  if (loading) {
+  if (course.proof_pending) {
+    return <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">Your payment proof is being reviewed. Paid until {formatDay(course.paid_until)}.</p>;
+  }
+  if (course.overdue) {
     return (
-      <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="lg:hidden h-14"></div>
-          <Header
-            user={user}
-            onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
-          />
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-slate-600">Loading courses...</p>
-            </div>
-          </div>
-        </div>
+      <div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-800">
+        Payment overdue since {formatDay(course.paid_until)}. Access pauses on {formatDay(course.pauses_on)}.
+        {course.rejection_reason && <span className="block">Last proof not accepted: {course.rejection_reason}</span>}
+        {uploadButton}
       </div>
     );
   }
+  if (course.renewal_open) {
+    return (
+      <div className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+        Next payment due {formatDay(course.paid_until)}.
+        {course.rejection_reason && <span className="block">Last proof not accepted: {course.rejection_reason}</span>}
+        {uploadButton}
+      </div>
+    );
+  }
+  return <p className="mt-3 text-[11px] font-medium text-slate-500">Paid until {formatDay(course.paid_until)}</p>;
+}
+
+export default function CoursesPage() {
+  const { user, loading: userLoading } = usePortalUser();
+  const [courses, setCourses] = useState<CourseCatalogItem[]>([]);
+  const [activeTab, setActiveTab] = useState<"enrolled" | "available">("enrolled");
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<CourseCatalogItem | null>(null);
+  const [paymentFile, setPaymentFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchCatalog = async () => {
+    const token = getAccessToken();
+    if (!token) return;
+    try {
+      const response = await axios.get<CourseCatalogItem[]>(`${API_URL}/courses/catalog`, {
+        headers: authHeaders(token),
+      });
+      setCourses(response.data);
+      setError(null);
+    } catch (requestError) {
+      if (!isUnauthorized(requestError)) {
+        setError("We could not load the course catalog. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    const query = new URLSearchParams(window.location.search).get("search");
+    if (query) setSearch(query);
+    void fetchCatalog();
+  }, [user]);
+
+  // Arriving from the header search: open the tab that has the matches.
+  const [initialTabChosen, setInitialTabChosen] = useState(false);
+  useEffect(() => {
+    if (initialTabChosen || loading || !search.trim()) return;
+    setInitialTabChosen(true);
+    const query = search.trim().toLowerCase();
+    const enrolledMatch = courses.some(
+      (course) =>
+        mine(course) &&
+        (course.name.toLowerCase().includes(query) || course.code.toLowerCase().includes(query)),
+    );
+    if (!enrolledMatch) setActiveTab("available");
+  }, [courses, initialTabChosen, loading, search]);
+
+  const visibleCourses = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+    return courses.filter((course) => {
+      const inTab =
+        activeTab === "enrolled"
+          ? mine(course)
+          : !mine(course);
+      const matches =
+        !normalizedSearch ||
+        course.name.toLowerCase().includes(normalizedSearch) ||
+        course.code.toLowerCase().includes(normalizedSearch);
+      return inTab && matches;
+    });
+  }, [activeTab, courses, search]);
+
+  const enrolledCount = courses.filter(mine).length;
+  const availableCount = courses.length - enrolledCount;
+  const otherTab = activeTab === "enrolled" ? "available" : "enrolled";
+  const otherTabMatches = search.trim()
+    ? courses.filter((course) => {
+        const query = search.trim().toLowerCase();
+        const inOther = otherTab === "enrolled" ? mine(course) : !mine(course);
+        return inOther && (course.name.toLowerCase().includes(query) || course.code.toLowerCase().includes(query));
+      }).length
+    : 0;
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    if (file && file.size > MAX_FILE_BYTES) {
+      setError("Payment proof must be 10 MB or smaller.");
+      event.target.value = "";
+      setPaymentFile(null);
+      return;
+    }
+    setPaymentFile(file);
+    setError(null);
+  };
+
+  const submitPaymentProof = async () => {
+    if (!selectedCourse || !paymentFile) {
+      setError("Choose a payment proof file before submitting.");
+      return;
+    }
+    const token = getAccessToken();
+    if (!token) return;
+
+    try {
+      setSubmitting(true);
+      const formData = new FormData();
+      formData.append("file", paymentFile);
+      await axios.post(
+        `${API_URL}/courses/${selectedCourse.id}/enroll-with-proof`,
+        formData,
+        { headers: authHeaders(token) },
+      );
+      setSelectedCourse(null);
+      setPaymentFile(null);
+      setSuccess(
+        isRenewal(selectedCourse)
+          ? `Your payment for ${selectedCourse.name} is being reviewed.`
+          : `${selectedCourse.name} is now pending payment review.`,
+      );
+      await fetchCatalog();
+    } catch (requestError) {
+      setError(getApiError(requestError, "Payment proof could not be submitted."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (userLoading || !user) return <PortalLoading label="Loading courses..." />;
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="lg:hidden h-14"></div>
-        <Header
-          user={user}
-          onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
-        />
-
-        <main className="flex-1 overflow-auto">
-          <div className="p-4 sm:p-6 lg:p-8 space-y-8">
-            {/* Header Section */}
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-2">
-                My Courses
-              </h1>
-              <p className="text-slate-600">
-                Manage your courses and explore new learning opportunities
-              </p>
-            </div>
-
-            {/* Success Message */}
-            {success && (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-                <Check className="w-5 h-5 text-green-600" />
-                <p className="text-green-800">{success}</p>
-              </div>
-            )}
-
-            {/* Error Message */}
-            {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600" />
-                <p className="text-red-800">{error}</p>
-              </div>
-            )}
-
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-3.5 w-5 h-5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search courses by name or code..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border placeholder:text-[#a7a7a7] text-black border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
-              />
-            </div>
-
-            {/* Enrolled Courses Section */}
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <BookOpen className="w-6 h-6 text-slate-900" />
-                <h2 className="text-2xl font-bold text-slate-900">
-                  Enrolled Courses
-                </h2>
-                <span className="ml-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-                  {filteredEnrolled.length}
-                </span>
-              </div>
-
-              {filteredEnrolled.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {filteredEnrolled.map((course) => (
-                    <div
-                      key={course.id}
-                      className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 hover:shadow-md transition"
-                    >
-                      {/* Course Header */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h3 className="text-lg font-bold text-slate-900">
-                            {course.name}
-                          </h3>
-                          <p className="text-sm text-slate-500 mt-1">
-                            {course.code}
-                          </p>
-                        </div>
-                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-green-100">
-                          <Check className="w-6 h-6 text-green-600" />
-                        </div>
-                      </div>
-
-                      {/* Course Details */}
-                      <p className="text-sm text-slate-600 mt-2">
-                        Expand your knowledge in {course.name}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-12 text-center">
-                  <BookOpen className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                  <p className="text-slate-600">
-                    {searchTerm
-                      ? "No enrolled courses match your search"
-                      : "You haven't enrolled in any courses yet"}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Available Courses Section */}
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Plus className="w-6 h-6 text-slate-900" />
-                <h2 className="text-2xl font-bold text-slate-900">
-                  Available Courses
-                </h2>
-                <span className="ml-2 px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-semibold">
-                  {filteredAvailable.length}
-                </span>
-              </div>
-
-              {filteredAvailable.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                  {filteredAvailable.map((course) => (
-                    <div
-                      key={course.id}
-                      className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 hover:shadow-md transition group"
-                    >
-
-              {paymentModalOpen && selectedCourse && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-                  <div className="bg-white w-full max-w-lg rounded-xl shadow-lg border border-slate-200 p-6">
-                    <h3 className="text-xl font-bold text-slate-900 mb-2">
-                      Complete Enrollment Payment
-                    </h3>
-                    <p className="text-sm text-slate-600 mb-4">
-                      Please pay 2000 PKR to the account below and upload the payment proof to enroll in {selectedCourse.name}.
-                    </p>
-
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm text-slate-700 mb-4">
-                      <div className="font-semibold text-slate-900">Account name: Ali Imran</div>
-                      <div>Account no: 12345678</div>
-                      <div className="mt-2 text-slate-800 font-semibold">Amount: 2000 PKR</div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <label className="block text-sm font-semibold text-slate-900">
-                        Upload payment proof
-                      </label>
-                      <input
-                        type="file"
-                        accept="image/*,.pdf"
-                        onChange={(e) => setPaymentFile(e.target.files?.[0] ?? null)}
-                        className="w-full text-sm"
-                      />
-                    </div>
-
-                    <div className="mt-6 flex items-center justify-end gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setPaymentModalOpen(false)}
-                        className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handlePaymentEnroll}
-                        disabled={uploadingPayment}
-                        className="px-4 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-60"
-                      >
-                        {uploadingPayment ? "Uploading..." : "Upload & Enroll"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-                      {/* Course Header */}
-                      <div className="mb-4">
-                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-slate-700 transition">
-                          {course.name}
-                        </h3>
-                        <p className="text-sm text-slate-500 mt-1">
-                          {course.code}
-                        </p>
-                      </div>
-
-                      {/* Course Info */}
-                      <div className="space-y-3 mb-6">
-                        <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                          <span className="text-sm text-slate-600">
-                            Difficulty
-                          </span>
-                          <span className="font-semibold text-orange-700">
-                            A-Level
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Enroll Button */}
-                      <button
-                        onClick={() => handleEnroll(course.id)}
-                        disabled={enrollingId === course.id}
-                        className="w-full px-4 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 disabled:opacity-70 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition flex items-center justify-center gap-2"
-                      >
-                        {enrollingId === course.id ? (
-                          <>
-                            <Loader className="w-4 h-4 animate-spin" />
-                            Enrolling...
-                          </>
-                        ) : (
-                          <>
-                            <Plus className="w-4 h-4" />
-                            Enroll Now
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-12 text-center">
-                  <Plus className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                  <p className="text-slate-600">
-                    {searchTerm
-                      ? "No available courses match your search"
-                      : "All available courses have been enrolled"}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </main>
+    <PortalLayout
+      user={user}
+      searchValue={search}
+      onSearchChange={setSearch}
+      searchPlaceholder="Search courses by name or code..."
+    >
+      <div className="mb-7 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-[-0.04em] text-[#051831] sm:text-4xl">My Courses</h1>
+          <p className="mt-1.5 text-sm text-slate-500">Manage your enrolled curriculum and discover new opportunities.</p>
+        </div>
+        <div className="inline-flex self-start rounded-lg border border-[#dce4ef] bg-[#f2f5fa] p-1 sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab("enrolled")}
+            className={`rounded-md px-5 py-2 text-xs font-bold transition ${activeTab === "enrolled" ? "bg-[#0866ef] text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+          >
+            Enrolled <span className="ml-1 opacity-70">{enrolledCount}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("available")}
+            className={`rounded-md px-5 py-2 text-xs font-bold transition ${activeTab === "available" ? "bg-[#0866ef] text-white shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+          >
+            Available <span className="ml-1 opacity-70">{availableCount}</span>
+          </button>
+        </div>
       </div>
 
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/45 bg-opacity-50 lg:hidden z-40"
-          onClick={() => setSidebarOpen(false)}
-        ></div>
+      {success && (
+        <div className="mb-5 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <Check className="mt-0.5 h-4 w-4 shrink-0" />
+          <span className="flex-1">{success}</span>
+          <button type="button" onClick={() => setSuccess(null)} aria-label="Dismiss"><X className="h-4 w-4" /></button>
+        </div>
       )}
-    </div>
-  );
-};
+      {error && !selectedCourse && (
+        <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span className="flex-1">{error}</span>
+          <button type="button" onClick={() => setError(null)} aria-label="Dismiss"><X className="h-4 w-4" /></button>
+        </div>
+      )}
 
-export default CoursesPage;
+      {loading ? (
+        <div className="grid gap-5 [grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))]">
+          {[0, 1, 2].map((item) => <div key={item} className="h-[380px] animate-pulse rounded-xl border border-slate-200 bg-white" />)}
+        </div>
+      ) : visibleCourses.length ? (
+        <div className="grid gap-5 [grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))]">
+          {visibleCourses.map((course) => {
+            const progress = clampProgress(course.progress);
+            const pending = course.enrollment_status === "pending";
+            const rejected = course.enrollment_status === "rejected";
+            const paused = course.enrollment_status === "paused";
+            const openUpload = () => { setSelectedCourse(course); setPaymentFile(null); setError(null); };
+            const complete = course.enrollment_status === "enrolled" && (progress >= 100 || course.completed >= 100);
+            return (
+              <article key={course.id} className="overflow-hidden rounded-xl border border-[#e4e9f1] bg-white p-4 shadow-[0_10px_35px_rgba(13,35,68,0.055)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_40px_rgba(13,35,68,0.09)]">
+                <div className="relative h-40 overflow-hidden rounded-lg bg-slate-100">
+                  <Image src={COURSE_IMAGE} alt="A stack of academic textbooks" fill sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw" className="object-cover" priority={course === visibleCourses[0]} />
+                  <span className={`absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold shadow-sm ${rejected || paused ? "bg-red-50 text-red-700" : pending ? "bg-amber-50 text-amber-700" : complete ? "bg-slate-100 text-slate-600" : course.enrollment_status === "enrolled" ? "bg-blue-50 text-[#0866ef]" : "bg-white text-slate-700"}`}>
+                    {rejected || paused ? <AlertCircle className="h-3 w-3" /> : pending ? <Clock3 className="h-3 w-3" /> : complete ? <Check className="h-3 w-3" /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}
+                    {paused ? "Access paused" : rejected ? "Proof not accepted" : pending ? "Pending review" : complete ? "Completed" : course.enrollment_status === "enrolled" ? "In progress" : "Open for enrollment"}
+                  </span>
+                </div>
+
+                <div className="px-1 pb-1 pt-4">
+                  <h2 className="min-h-12 text-lg font-bold leading-6 text-[#24364f]">{course.name}</h2>
+                  <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                    <GraduationCap className="h-3.5 w-3.5" /> {course.code}
+                  </p>
+
+                  {course.enrollment_status === "enrolled" ? (
+                    <>
+                      <div className="mt-5 flex items-center justify-between text-[10px] font-semibold text-slate-500">
+                        <span>Progress</span><span className="font-bold text-[#0866ef]">{progress}%</span>
+                      </div>
+                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e5ebf4]"><div className="h-full rounded-full bg-[#0866ef]" style={{ width: `${progress}%` }} /></div>
+                      <Link href="/schedule" className={`mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg text-xs font-bold transition ${complete ? "border border-[#72a7f6] text-[#397be0] hover:bg-blue-50" : "bg-[#0866ef] text-white shadow-md shadow-blue-200 hover:bg-[#075bda]"}`}>
+                        {complete ? "Review material" : "Continue learning"} <ArrowRight className="h-3.5 w-3.5" />
+                      </Link>
+                      <BillingNote course={course} onUpload={openUpload} />
+                    </>
+                  ) : paused ? (
+                    <div className="mt-5 space-y-3">
+                      <p className="rounded-lg bg-red-50 px-3 py-2.5 text-xs font-medium leading-5 text-red-800">
+                        Your access is paused because this month&apos;s payment is overdue.
+                        {course.removal_on ? ` If no payment arrives by ${formatDay(course.removal_on)}, you'll be removed from the course.` : ""}
+                      </p>
+                      {course.proof_pending ? (
+                        <p className="rounded-lg bg-amber-50 px-3 py-2.5 text-xs font-medium text-amber-800">Your payment proof is being reviewed.</p>
+                      ) : (
+                        <button type="button" onClick={openUpload} className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#0866ef] text-xs font-bold text-white shadow-md shadow-blue-200 transition hover:bg-[#075bda]">
+                          Upload payment proof <FileUp className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ) : rejected ? (
+                    <div className="mt-5 space-y-3">
+                      <p className="rounded-lg bg-red-50 px-3 py-2.5 text-xs font-medium leading-5 text-red-800">
+                        Your payment proof wasn&apos;t accepted{course.rejection_reason ? `: ${course.rejection_reason}` : "."}
+                      </p>
+                      <button type="button" onClick={() => { setSelectedCourse(course); setPaymentFile(null); setError(null); }} className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#0866ef] text-xs font-bold text-white shadow-md shadow-blue-200 transition hover:bg-[#075bda]">
+                        Upload a new proof <FileUp className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : pending ? (
+                    <div className="mt-5 flex min-h-[66px] items-center rounded-lg bg-amber-50 px-3 text-xs font-medium leading-5 text-amber-800">Your enrollment request is awaiting approval. Course access unlocks after review.</div>
+                  ) : (
+                    <button type="button" onClick={() => { setSelectedCourse(course); setPaymentFile(null); setError(null); }} className="mt-5 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#0866ef] text-xs font-bold text-white shadow-md shadow-blue-200 transition hover:bg-[#075bda]">
+                      Request enrollment <ArrowRight className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-blue-200 bg-white px-6 py-16 text-center">
+          <GraduationCap className="mx-auto h-10 w-10 text-blue-300" />
+          <h2 className="mt-4 text-base font-bold text-slate-700">No courses found</h2>
+          <p className="mt-1 text-sm text-slate-500">{search ? "Try a different course name or code." : activeTab === "enrolled" ? "Your approved courses will appear here." : "There are no additional courses available right now."}</p>
+          {otherTabMatches > 0 && (
+            <button type="button" onClick={() => setActiveTab(otherTab)} className="mt-4 rounded-lg border border-blue-200 px-4 py-2 text-sm font-bold text-[#0866ef] hover:bg-blue-50">
+              Show {otherTabMatches} {otherTabMatches === 1 ? "match" : "matches"} in {otherTab === "enrolled" ? "Enrolled" : "Available"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {selectedCourse && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#06172d]/65 p-4" role="dialog" aria-modal="true" aria-labelledby="enrollment-title">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl sm:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#0866ef]">{isRenewal(selectedCourse) ? "Monthly payment" : "Enrollment request"}</p>
+                <h2 id="enrollment-title" className="mt-1 text-xl font-bold text-[#0b1f39]">{selectedCourse.name}</h2>
+                <p className="mt-1 text-sm text-slate-500">{selectedCourse.code}</p>
+              </div>
+              <button type="button" onClick={() => setSelectedCourse(null)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Close"><X className="h-5 w-5" /></button>
+            </div>
+
+            <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-slate-700">
+              Complete the official payment instructions provided by admissions, then upload the receipt below. Need the instructions? <Link href="/contact" className="font-bold text-[#0866ef] hover:underline">Contact admissions</Link> before submitting.
+            </div>
+
+            <label className="mt-5 block text-sm font-bold text-slate-800" htmlFor="payment-proof">Payment proof</label>
+            <label htmlFor="payment-proof" className="mt-2 flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-blue-300 bg-[#f8fbff] px-4 text-center transition hover:bg-blue-50">
+              <FileUp className="h-6 w-6 text-[#4b8df3]" />
+              <span className="mt-2 text-sm font-semibold text-slate-700">{paymentFile ? paymentFile.name : "Choose a receipt or proof"}</span>
+              <span className="mt-1 text-xs text-slate-400">PDF, JPEG, PNG, or WebP · up to 10 MB</span>
+            </label>
+            <input id="payment-proof" type="file" className="sr-only" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={handleFileChange} />
+
+            {error && <p className="mt-3 flex items-center gap-2 text-sm text-red-600"><AlertCircle className="h-4 w-4" />{error}</p>}
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => setSelectedCourse(null)} className="h-10 rounded-lg border border-slate-200 px-5 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
+              <button type="button" onClick={submitPaymentProof} disabled={!paymentFile || submitting} className="flex h-10 items-center justify-center gap-2 rounded-lg bg-[#0866ef] px-5 text-sm font-bold text-white shadow-md shadow-blue-200 transition hover:bg-[#075bda] disabled:cursor-not-allowed disabled:opacity-50">
+                {submitting && <LoaderCircle className="h-4 w-4 animate-spin" />} Submit for review
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </PortalLayout>
+  );
+}

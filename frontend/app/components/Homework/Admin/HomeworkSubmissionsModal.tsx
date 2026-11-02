@@ -15,8 +15,9 @@ import {
   Save,
   Upload,
   Trash2,
-  FileText 
+  FileText
 } from "lucide-react";
+import { ProtectedFileLink } from "../../Portal/ProtectedFile";
 
 interface Homework {
   id: number;
@@ -34,6 +35,10 @@ interface Submission {
   homework_id: number;
   user_id: number;
   user?: UserSimple; // Added user object
+  student_name?: string;
+  student_username?: string;
+  student_email?: string | null;
+  is_late?: boolean;
   file_url: string;
   submitted_at: string;
   score?: number | null; // Added score
@@ -193,22 +198,6 @@ const HomeworkSubmissionsModal = ({
     }
   };
 
-  const getFullFileUrl = (fileUrl: string): string => {
-  if (!fileUrl) return "";
-  
-  const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/$/, "");
-  
-  // If it's already a full URL
-  if (fileUrl.startsWith('http')) return fileUrl;
-
-  // Extract just the filename (e.g., "profile.jpeg")
-  const filename = fileUrl.split('/').pop();
-
-  // Route the request specifically through the homeworks endpoint
-  // This matches: @router.get("/homeworks/{filename}")
-  return `${apiUrl}/uploads/homeworks/${filename}`;
-};
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short", day: "numeric", year: "numeric",
@@ -267,15 +256,13 @@ const HomeworkSubmissionsModal = ({
               <div className="flex items-center gap-2">
                 {solutionUrl ? (
                   <>
-                    <a
-                      href={`${process.env.NEXT_PUBLIC_API_URL}${solutionUrl}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <ProtectedFileLink
+                      fileUrl={solutionUrl}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg transition text-xs font-medium border border-purple-200"
                     >
                       <Download className="w-3 h-3" />
                       View
-                    </a>
+                    </ProtectedFileLink>
                     <button
                       onClick={handleRemoveSolution}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition text-xs font-medium border border-red-200"
@@ -338,9 +325,10 @@ const HomeworkSubmissionsModal = ({
                           </div>
                           <div>
                             <h3 className="font-bold text-slate-900">
-                              {submission.user?.full_name || `Student #${submission.user_id}`}
+                              {submission.student_name || submission.user?.full_name || `Student #${submission.user_id}`}
+                              {submission.is_late && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 align-middle text-[10px] font-bold uppercase text-amber-800">Late</span>}
                             </h3>
-                            <p className="text-xs text-slate-500">{submission.user?.email}</p>
+                            <p className="text-xs text-slate-500">{submission.student_email || submission.user?.email}</p>
                             <div className="flex items-center gap-1 mt-1 text-xs text-slate-400">
                               <Calendar className="w-3 h-3" />
                               {formatDate(submission.submitted_at)}
@@ -354,21 +342,19 @@ const HomeworkSubmissionsModal = ({
                             {getFileName(submission.file_url)}
                           </p>
                           <div className="flex gap-2">
-                            <a
-                              href={`${getFullFileUrl(submission.file_url)}?mode=view`}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <ProtectedFileLink
+                              fileUrl={submission.file_url}
                               className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white border border-slate-300 rounded text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
                             >
                               <ExternalLink className="w-3 h-3" /> View
-                            </a>
-                            <a
-                              href={getFullFileUrl(submission.file_url)}
-                              download
+                            </ProtectedFileLink>
+                            <ProtectedFileLink
+                              fileUrl={submission.file_url}
+                              mode="download"
                               className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-slate-800 text-white rounded text-xs font-semibold hover:bg-slate-900 transition"
                             >
                               <Download className="w-3 h-3" /> Download
-                            </a>
+                            </ProtectedFileLink>
                           </div>
                         </div>
                       </div>

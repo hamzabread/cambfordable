@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import axios from "axios";
 import { BookOpen, AlertCircle, CheckCircle, Loader, X } from "lucide-react";
+import VoiceInput, { appendSpoken } from "../../Portal/VoiceInput";
 
 interface Course {
   id: number;
@@ -16,6 +18,7 @@ interface Homework {
   title: string;
   description: string;
   due_date: string;
+  max_score?: number;
   image_url?: string;
 }
 
@@ -35,6 +38,7 @@ const CreateHomeworkForm = ({
     title: "",
     description: "",
     due_date: "",
+    max_score: "100",
   });
   const [attachedImageFile, setAttachedImageFile] = useState<File | null>(null);
   const [attachedImagePreview, setAttachedImagePreview] = useState<string | null>(null);
@@ -109,6 +113,7 @@ const CreateHomeworkForm = ({
           title: formData.title,
           description: formData.description,
           due_date: dueDate.toISOString(),
+          max_score: Number(formData.max_score),
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -147,15 +152,16 @@ const CreateHomeworkForm = ({
         title: "",
         description: "",
         due_date: "",
+        max_score: "100",
       });
       setAttachedImageFile(null);
       setAttachedImagePreview(null);
       setSuccess(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error creating homework:", err);
-      if (err.response?.data?.detail) {
+      if (axios.isAxiosError(err) && typeof err.response?.data?.detail === "string") {
         setError(err.response.data.detail);
-      } else if (err.message === "Network Error") {
+      } else if (axios.isAxiosError(err) && err.message === "Network Error") {
         setError("Network error. Make sure the server is running.");
       } else {
         setError("Failed to create homework. Please try again.");
@@ -232,10 +238,17 @@ const CreateHomeworkForm = ({
 
         {/* Title */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Title *
-          </label>
+          <div className="mb-2 flex items-start justify-between gap-3">
+            <label htmlFor="homework-title" className="pt-1.5 text-sm font-medium text-slate-700">
+              Title *
+            </label>
+            <VoiceInput
+              label="homework title"
+              onText={(text) => setFormData((prev) => ({ ...prev, title: appendSpoken(prev.title, text) }))}
+            />
+          </div>
           <input
+            id="homework-title"
             type="text"
             name="title"
             value={formData.title}
@@ -248,10 +261,17 @@ const CreateHomeworkForm = ({
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Description *
-          </label>
+          <div className="mb-2 flex items-start justify-between gap-3">
+            <label htmlFor="homework-description" className="pt-1.5 text-sm font-medium text-slate-700">
+              Description *
+            </label>
+            <VoiceInput
+              label="homework description"
+              onText={(text) => setFormData((prev) => ({ ...prev, description: appendSpoken(prev.description, text) }))}
+            />
+          </div>
           <textarea
+            id="homework-description"
             name="description"
             value={formData.description}
             onChange={handleChange}
@@ -263,6 +283,7 @@ const CreateHomeworkForm = ({
         </div>
 
         {/* Due Date */}
+        <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">
             Due Date *
@@ -275,6 +296,11 @@ const CreateHomeworkForm = ({
             required
             className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition"
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Maximum Score *</label>
+          <input type="number" name="max_score" value={formData.max_score} onChange={handleChange} min="1" step="0.5" required className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition" />
+        </div>
         </div>
 
         {/* Optional Image */}
@@ -292,9 +318,12 @@ const CreateHomeworkForm = ({
 
           {attachedImagePreview && (
             <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <img
+              <Image
                 src={attachedImagePreview}
                 alt="Homework image preview"
+                width={900}
+                height={500}
+                unoptimized
                 className="w-full max-h-48 object-contain rounded"
               />
             </div>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { MessageSquare, Clock, Download, AlertCircle } from "lucide-react";
+import { ProtectedFileLink } from "../Portal/ProtectedFile";
 
 interface HomeworkGrade {
   id: number;
@@ -140,13 +141,13 @@ const HomeworkGrades: React.FC<HomeworkGradesProps> = ({ homeworkId }) => {
         {/* File Download */}
         <div className="flex items-center gap-3 pt-4 border-t border-slate-200">
           <Download className="w-4 h-4 text-slate-600" />
-          <a
-            href={`${process.env.NEXT_PUBLIC_API_URL}${submission.file_url}`}
-            download
+          <ProtectedFileLink
+            fileUrl={submission.file_url}
+            mode="download"
             className="text-blue-600 hover:text-blue-700 font-medium text-sm"
           >
             Download Your Submission
-          </a>
+          </ProtectedFileLink>
         </div>
       </div>
 
@@ -183,16 +184,14 @@ const HomeworkGrades: React.FC<HomeworkGradesProps> = ({ homeworkId }) => {
                 Download the official solution for this homework
               </p>
             </div>
-            <a
-              href={`${process.env.NEXT_PUBLIC_API_URL}${solutionUrl}`}
-              download
-              target="_blank"
-              rel="noopener noreferrer"
+            <ProtectedFileLink
+              fileUrl={solutionUrl}
+              mode="download"
               className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition text-sm"
             >
               <Download className="w-4 h-4" />
               Download Solution
-            </a>
+            </ProtectedFileLink>
           </div>
         </div>
       )}
