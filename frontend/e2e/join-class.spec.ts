@@ -25,5 +25,6 @@ test("a student who isn't enrolled can't open the classroom", async ({ page }) =
   await logIn(page, NEWCOMER);
   // The seeded live class is the first class in the database.
   await page.goto("/meeting/1");
-  await expect(page.getByRole("alert")).toContainText(/enrolled/i);
+  // (Next.js adds its own empty role=alert route announcer, so match the text.)
+  await expect(page.getByText(/not enrolled/i)).toBeVisible();
 });

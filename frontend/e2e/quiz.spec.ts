@@ -4,7 +4,7 @@ import { logIn, STUDENT } from "./accounts";
 test("a student takes and submits a quiz", async ({ page }) => {
   await logIn(page, STUDENT);
   await page.goto("/quizzes");
-  const card = page.locator("article, li, div").filter({ hasText: "E2E Waves quiz" }).last();
+  const card = page.locator("article").filter({ hasText: "E2E Waves quiz" });
   await card.getByRole("link", { name: /start quiz/i }).click();
 
   await expect(page).toHaveURL(/\/quiz\/\d+$/);

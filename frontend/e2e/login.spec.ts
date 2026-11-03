@@ -6,7 +6,7 @@ test("a wrong password is refused without leaving the page", async ({ page }) =>
   await page.getByLabel("Username or email").fill(STUDENT);
   await page.getByLabel("Password", { exact: true }).fill("not-the-password");
   await page.getByRole("button", { name: "Login", exact: true }).click();
-  await expect(page.getByText(/invalid/i)).toBeVisible();
+  await expect(page.getByText("Incorrect username, email or password")).toBeVisible();
   await expect(page).toHaveURL(/\/login/);
 });
 
