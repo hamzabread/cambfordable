@@ -616,7 +616,7 @@ const QuizTaker: React.FC<QuizTakerProps> = ({ quizId, onSubmit }) => {
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <p className="text-blue-900 text-sm">
-              ⓘ By clicking "Start Quiz", you agree to the proctoring terms and acknowledge that violations may result in automatic submission and academic consequences.
+              ⓘ By starting the quiz, you agree to the proctoring terms and acknowledge that violations may result in automatic submission and academic consequences.
             </p>
           </div>
 

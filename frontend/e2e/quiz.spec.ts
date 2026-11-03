@@ -8,7 +8,7 @@ test("a student takes and submits a quiz", async ({ page }) => {
   await card.getByRole("link", { name: /start quiz/i }).click();
 
   await expect(page).toHaveURL(/\/quiz\/\d+$/);
-  await page.getByRole("button", { name: /start quiz/i }).click();
+  await page.getByRole("button", { name: /start the quiz/i }).click();
   await expect(page.getByText("What is the unit of frequency?")).toBeVisible();
 
   await page.getByLabel("Hertz").check();

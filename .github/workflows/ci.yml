@@ -69,8 +69,25 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      # Starts a seeded throwaway backend and a production build (playwright.config.ts).
-      - run: npx playwright test
+      - name: Build the frontend for browser tests
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8010
+          NEXT_DIST_DIR: .next-e2e
+      - name: Check the test backend starts
+        run: |
+          python ../backend/tests/e2e_server.py --port 8010 &
+          for attempt in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8010/ && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:8010/
+          kill %1
+      # Starts a seeded throwaway backend and serves the build above (playwright.config.ts).
+      - name: Run browser tests
+        run: npx playwright test
+        env:
+          NEXT_DIST_DIR: .next-e2e
       - uses: actions/upload-artifact@v5
         if: failure()
         with:

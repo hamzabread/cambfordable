@@ -39,7 +39,8 @@ export default defineConfig({
       timeout: 60_000,
     },
     {
-      command: `npm run build && npx next start -p ${WEB_PORT}`,
+      // CI builds in an earlier step; locally the tests build first.
+      command: CI ? `npx next start -p ${WEB_PORT}` : `npm run build && npx next start -p ${WEB_PORT}`,
       url: WEB_URL,
       reuseExistingServer: !CI,
       timeout: 300_000,
