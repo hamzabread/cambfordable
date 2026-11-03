@@ -12,6 +12,8 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@builder.io/react": "^9.4.10",
+    "@builder.io/sdk": "^6.3.3",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
     "@zoom/meetingsdk": "^5.0.4",
@@ -35,5 +37,10 @@
     "eslint-config-next": "16.0.7",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "@builder.io/react": {
+      "isolated-vm": "^5.0.4"
+    }
   }
 }

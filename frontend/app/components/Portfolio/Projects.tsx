@@ -129,9 +129,8 @@ function ProjectCard({ project, index }: { project: Project; index: number }) {
       </div>
 
       {/* Title */}
-      <h3 className={`relative mt-5 font-display text-ink tracking-tight leading-tight ${
-        isFeatured ? "text-5xl md:text-6xl lg:text-7xl" : "text-3xl md:text-4xl"
-      }`}>{project.title}</h3>
+      <h3 className={`relative mt-5 font-display text-ink tracking-tight leading-tight ${isFeatured ? "text-5xl md:text-6xl lg:text-7xl" : "text-3xl md:text-4xl"
+        }`}>{project.title}</h3>
       <div className={`relative mt-1.5 font-medium text-sm md:text-base ${a.text}`}>{project.subtitle}</div>
 
       <p className={`relative mt-4 text-ink-mute leading-relaxed text-sm ${isFeatured ? "max-w-2xl" : ""}`}>

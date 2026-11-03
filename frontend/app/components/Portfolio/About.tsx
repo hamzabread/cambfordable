@@ -8,9 +8,9 @@ import MaskWords from "../../../components/MaskWords";
 // Each stat gets its own color
 const statAccents = [
   { num: "text-violet-300", bg: "border-violet-500/60" },
-  { num: "text-cyan-300",   bg: "border-cyan-500/60" },
-  { num: "text-pink-300",   bg: "border-pink-500/60" },
-  { num: "text-lime-300",   bg: "border-lime-500/60" },
+  { num: "text-cyan-300", bg: "border-cyan-500/60" },
+  { num: "text-pink-300", bg: "border-pink-500/60" },
+  { num: "text-lime-300", bg: "border-lime-500/60" },
 ];
 
 export default function About() {
@@ -75,7 +75,7 @@ export default function About() {
           <p className="mt-4 text-ink-mute leading-relaxed max-w-2xl">
             Off the keyboard I solve Rubik&apos;s cubes, push my chess rating, kick a
             football around, and lose weekends to a good RPG. Patterns,
-            systems, the satisfaction of figuring things out — same instinct
+            systems, the satisfaction of figuring things out, same instinct
             that pulls me toward backend work.
           </p>
 

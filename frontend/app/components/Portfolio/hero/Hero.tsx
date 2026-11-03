@@ -61,12 +61,12 @@ export default function Hero() {
             className="mt-7 max-w-lg text-base md:text-lg text-white/55 leading-relaxed"
           >
             I build{" "}
-            <span className="text-white/85">scalable web, IoT and AI products</span>{" "}
+            <span className="text-white/85">scalable web and AI products</span>{" "}
             from the backend up. Currently at{" "}
             <span className="text-accent-violet font-medium">Quecko</span>,
             shipping client work in{" "}
             <span className="text-white/85">Next.js</span>,{" "}
-            <span className="text-white/85">.NET</span> and{" "}
+            <span className="text-white/85">Express.js</span> and{" "}
             <span className="text-white/85">FastAPI</span>.
           </motion.p>
 
