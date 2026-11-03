@@ -181,6 +181,8 @@ def test_recordings_questions_archive_and_deletes(check, client, db, monkeypatch
     e.paid_until = now - timedelta(days=10)
     db.commit()
     check("billing skips archived course", run_billing_cycle(db, now=now)["paused"], 0)
+    cat = next(c for c in client.get("/courses/catalog", headers=h("alice")).json() if c["id"] == course.id)
+    check("archived course shows no fee due", (cat["overdue"], cat["pauses_on"], cat["paid_until"], cat["renewal_open"]), (False, None, None, False))
     check("unarchive", client.post(f"/courses/{course.id}/unarchive", headers=h("admin")).json()["archived_at"], None)
     check("billing runs again after unarchive", run_billing_cycle(db, now=now)["paused"], 1)
     check("TA cannot archive", client.post(f"/courses/{course.id}/archive", headers=h("ta")).status_code, 403)

@@ -57,10 +57,11 @@ def billing_state(enrollment: Enrollment, now: datetime | None = None) -> dict:
     now = as_utc(now) or now_utc()
     paid_until = as_utc(enrollment.paid_until)
     paused_at = as_utc(enrollment.paused_at)
-    staff = is_staff(enrollment.user)
-    overdue = bool(enrollment.paid and paid_until and now > paid_until and not staff)
+    # Staff aren't billed, and nobody is billed for an archived (finished) course.
+    unbilled = is_staff(enrollment.user) or bool(enrollment.course and enrollment.course.archived_at)
+    overdue = bool(enrollment.paid and paid_until and now > paid_until and not unbilled)
     renewal_open = (
-        not staff
+        not unbilled
         and not enrollment.proof_pending
         and (
             (enrollment.paid and paid_until is not None and paid_until - now <= RENEWAL_WINDOW)
@@ -68,7 +69,7 @@ def billing_state(enrollment: Enrollment, now: datetime | None = None) -> dict:
         )
     )
     return {
-        "paid_until": None if staff else paid_until,
+        "paid_until": None if unbilled else paid_until,
         "overdue": overdue,
         "pauses_on": paid_until + GRACE_PERIOD if overdue else None,
         "paused_at": paused_at,
