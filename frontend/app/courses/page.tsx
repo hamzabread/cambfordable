@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import axios from "axios";
@@ -11,9 +11,9 @@ import {
   Clock3,
   FileUp,
   GraduationCap,
-  LoaderCircle,
   X,
 } from "lucide-react";
+import PaymentProofDialog from "../components/Courses/PaymentProofDialog";
 import PortalLayout from "../components/Portal/PortalLayout";
 import PortalLoading from "../components/Portal/PortalLoading";
 import { usePortalUser } from "../components/Portal/usePortalUser";
@@ -24,18 +24,15 @@ import {
   CourseCatalogItem,
   formatDay,
   getAccessToken,
-  getApiError,
   isUnauthorized,
 } from "@/lib/portal";
 
 const COURSE_IMAGE = "/assets/kimberly-farmer-lUaaKCUANVI-unsplash.jpg";
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 // Courses the student has (or had, while paused) access to.
 const mine = (course: CourseCatalogItem) =>
   course.enrollment_status === "enrolled" || course.enrollment_status === "paused";
 
-const isRenewal = (course: CourseCatalogItem) => mine(course);
 
 function BillingNote({ course, onUpload }: { course: CourseCatalogItem; onUpload: () => void }) {
   if (!course.paid_until) return null;
@@ -77,8 +74,6 @@ export default function CoursesPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<CourseCatalogItem | null>(null);
-  const [paymentFile, setPaymentFile] = useState<File | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   const fetchCatalog = async () => {
     const token = getAccessToken();
@@ -145,50 +140,6 @@ export default function CoursesPage() {
       }).length
     : 0;
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null;
-    if (file && file.size > MAX_FILE_BYTES) {
-      setError("Payment proof must be 10 MB or smaller.");
-      event.target.value = "";
-      setPaymentFile(null);
-      return;
-    }
-    setPaymentFile(file);
-    setError(null);
-  };
-
-  const submitPaymentProof = async () => {
-    if (!selectedCourse || !paymentFile) {
-      setError("Choose a payment proof file before submitting.");
-      return;
-    }
-    const token = getAccessToken();
-    if (!token) return;
-
-    try {
-      setSubmitting(true);
-      const formData = new FormData();
-      formData.append("file", paymentFile);
-      await axios.post(
-        `${API_URL}/courses/${selectedCourse.id}/enroll-with-proof`,
-        formData,
-        { headers: authHeaders(token) },
-      );
-      setSelectedCourse(null);
-      setPaymentFile(null);
-      setSuccess(
-        isRenewal(selectedCourse)
-          ? `Your payment for ${selectedCourse.name} is being reviewed.`
-          : `${selectedCourse.name} is now pending payment review.`,
-      );
-      await fetchCatalog();
-    } catch (requestError) {
-      setError(getApiError(requestError, "Payment proof could not be submitted."));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   if (userLoading || !user) return <PortalLoading label="Loading courses..." />;
 
   return (
@@ -247,7 +198,7 @@ export default function CoursesPage() {
             const pending = course.enrollment_status === "pending";
             const rejected = course.enrollment_status === "rejected";
             const paused = course.enrollment_status === "paused";
-            const openUpload = () => { setSelectedCourse(course); setPaymentFile(null); setError(null); };
+            const openUpload = () => { setSelectedCourse(course); setError(null); };
             const complete = course.enrollment_status === "enrolled" && (progress >= 100 || course.completed >= 100);
             return (
               <article key={course.id} className="overflow-hidden rounded-xl border border-[#e4e9f1] bg-white p-4 shadow-[0_10px_35px_rgba(13,35,68,0.055)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_40px_rgba(13,35,68,0.09)]">
@@ -295,14 +246,14 @@ export default function CoursesPage() {
                       <p className="rounded-lg bg-red-50 px-3 py-2.5 text-xs font-medium leading-5 text-red-800">
                         Your payment proof wasn&apos;t accepted{course.rejection_reason ? `: ${course.rejection_reason}` : "."}
                       </p>
-                      <button type="button" onClick={() => { setSelectedCourse(course); setPaymentFile(null); setError(null); }} className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#0866ef] text-xs font-bold text-white shadow-md shadow-blue-200 transition hover:bg-[#075bda]">
+                      <button type="button" onClick={() => { setSelectedCourse(course); setError(null); }} className="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#0866ef] text-xs font-bold text-white shadow-md shadow-blue-200 transition hover:bg-[#075bda]">
                         Upload a new proof <FileUp className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   ) : pending ? (
                     <div className="mt-5 flex min-h-[66px] items-center rounded-lg bg-amber-50 px-3 text-xs font-medium leading-5 text-amber-800">Your enrollment request is awaiting approval. Course access unlocks after review.</div>
                   ) : (
-                    <button type="button" onClick={() => { setSelectedCourse(course); setPaymentFile(null); setError(null); }} className="mt-5 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#0866ef] text-xs font-bold text-white shadow-md shadow-blue-200 transition hover:bg-[#075bda]">
+                    <button type="button" onClick={() => { setSelectedCourse(course); setError(null); }} className="mt-5 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#0866ef] text-xs font-bold text-white shadow-md shadow-blue-200 transition hover:bg-[#075bda]">
                       Request enrollment <ArrowRight className="h-3.5 w-3.5" />
                     </button>
                   )}
@@ -325,39 +276,15 @@ export default function CoursesPage() {
       )}
 
       {selectedCourse && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#06172d]/65 p-4" role="dialog" aria-modal="true" aria-labelledby="enrollment-title">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl sm:p-7">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.08em] text-[#0866ef]">{isRenewal(selectedCourse) ? "Monthly payment" : "Enrollment request"}</p>
-                <h2 id="enrollment-title" className="mt-1 text-xl font-bold text-[#0b1f39]">{selectedCourse.name}</h2>
-                <p className="mt-1 text-sm text-slate-500">{selectedCourse.code}</p>
-              </div>
-              <button type="button" onClick={() => setSelectedCourse(null)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Close"><X className="h-5 w-5" /></button>
-            </div>
-
-            <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm leading-6 text-slate-700">
-              Complete the official payment instructions provided by admissions, then upload the receipt below. Need the instructions? <Link href="/contact" className="font-bold text-[#0866ef] hover:underline">Contact admissions</Link> before submitting.
-            </div>
-
-            <label className="mt-5 block text-sm font-bold text-slate-800" htmlFor="payment-proof">Payment proof</label>
-            <label htmlFor="payment-proof" className="mt-2 flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-blue-300 bg-[#f8fbff] px-4 text-center transition hover:bg-blue-50">
-              <FileUp className="h-6 w-6 text-[#4b8df3]" />
-              <span className="mt-2 text-sm font-semibold text-slate-700">{paymentFile ? paymentFile.name : "Choose a receipt or proof"}</span>
-              <span className="mt-1 text-xs text-slate-400">PDF, JPEG, PNG, or WebP · up to 10 MB</span>
-            </label>
-            <input id="payment-proof" type="file" className="sr-only" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={handleFileChange} />
-
-            {error && <p className="mt-3 flex items-center gap-2 text-sm text-red-600"><AlertCircle className="h-4 w-4" />{error}</p>}
-
-            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button type="button" onClick={() => setSelectedCourse(null)} className="h-10 rounded-lg border border-slate-200 px-5 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
-              <button type="button" onClick={submitPaymentProof} disabled={!paymentFile || submitting} className="flex h-10 items-center justify-center gap-2 rounded-lg bg-[#0866ef] px-5 text-sm font-bold text-white shadow-md shadow-blue-200 transition hover:bg-[#075bda] disabled:cursor-not-allowed disabled:opacity-50">
-                {submitting && <LoaderCircle className="h-4 w-4 animate-spin" />} Submit for review
-              </button>
-            </div>
-          </div>
-        </div>
+        <PaymentProofDialog
+          course={selectedCourse}
+          onClose={() => setSelectedCourse(null)}
+          onSubmitted={(message) => {
+            setSelectedCourse(null);
+            setSuccess(message);
+            void fetchCatalog();
+          }}
+        />
       )}
     </PortalLayout>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import axios from "axios";
 import { AlertCircle, ArrowUpDown, CalendarClock, CheckCircle2, ChevronDown, Clock3, Download, FileCheck2, FileText, Filter, TriangleAlert, Upload } from "lucide-react";
@@ -63,6 +63,9 @@ export default function HomeworkPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // /homework?submit=<id> (from the dashboard) opens that assignment's submit dialog once.
+  const submitLinkHandled = useRef(false);
+
   const loadHomework = useCallback(async () => {
     const token = getAccessToken();
     if (!token) return;
@@ -71,6 +74,12 @@ export default function HomeworkPage() {
       setCourses(response.data.courses);
       setItems(response.data.items);
       setError(null);
+      const requested = Number(new URLSearchParams(window.location.search).get("submit"));
+      if (requested && !submitLinkHandled.current) {
+        submitLinkHandled.current = true;
+        const match = response.data.items.find((item) => item.id === requested && (item.status === "assigned" || item.status === "overdue"));
+        if (match) setSelectedHomework(match);
+      }
     } catch (requestError) {
       setError(getApiError(requestError, "We could not load your assignments."));
     } finally {
