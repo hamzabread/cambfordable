@@ -26,6 +26,12 @@ export default function PortalLayout({
 
   return (
     <div className="flex min-h-screen bg-[#f6f8fd] text-[#0a1d35]">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-white focus:px-4 focus:py-3 focus:text-sm focus:font-bold focus:text-[#0866ef] focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
       <Sidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
@@ -39,7 +45,7 @@ export default function PortalLayout({
           onSearchChange={onSearchChange}
           searchPlaceholder={searchPlaceholder}
         />
-        <main className="min-h-0 flex-1 overflow-y-auto">
+        <main id="main-content" tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto outline-none">
           <div
             className={`mx-auto w-full px-4 py-5 sm:px-6 sm:py-6 lg:px-8 ${
               wide ? "max-w-[1720px]" : "max-w-[1540px]"

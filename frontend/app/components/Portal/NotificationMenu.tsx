@@ -99,11 +99,12 @@ export default function NotificationMenu({ open, onOpenChange }: NotificationMen
         aria-label={unreadCount ? `${unreadCount} unread notifications` : "Notifications"}
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="relative rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-[#0866ef]"
+        aria-haspopup="dialog"
+        className="relative flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-[#0866ef]"
       >
         <Bell className="h-[18px] w-[18px]" />
         {unreadCount > 0 && (
-          <span className="absolute right-0.5 top-0.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white ring-2 ring-white">
+          <span className="absolute right-0.5 top-0.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-white">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -135,7 +136,7 @@ export default function NotificationMenu({ open, onOpenChange }: NotificationMen
                   >
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e5efff] text-[#0866ef]"><Icon className="h-4 w-4" /></span>
                     <span className="min-w-0 flex-1">
-                      <span className="flex items-start justify-between gap-2"><span className="truncate text-xs font-bold text-slate-800">{notification.title}</span><span className="shrink-0 text-[9px] text-slate-400">{relativeTime(notification.created_at)}</span></span>
+                      <span className="flex items-start justify-between gap-2"><span className="truncate text-xs font-bold text-slate-800">{notification.title}</span><span className="shrink-0 text-[11px] text-slate-500">{relativeTime(notification.created_at)}</span></span>
                       <span className={`mt-1 text-[11px] leading-4 text-slate-500 ${notification.kind === "contact" ? "block whitespace-pre-wrap break-words" : "line-clamp-2"}`}>{notification.message}</span>
                     </span>
                     {!notification.is_read && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#0866ef]" />}
@@ -143,7 +144,7 @@ export default function NotificationMenu({ open, onOpenChange }: NotificationMen
                 );
               })
             ) : (
-              <div className="px-6 py-10 text-center"><Bell className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-3 text-xs font-semibold text-slate-600">No notifications yet</p><p className="mt-1 text-[11px] text-slate-400">Course updates and grades will appear here.</p></div>
+              <div className="px-6 py-10 text-center"><Bell className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-3 text-xs font-semibold text-slate-600">No notifications yet</p><p className="mt-1 text-xs text-slate-500">Course updates and grades will appear here.</p></div>
             )}
           </div>
         </div>
